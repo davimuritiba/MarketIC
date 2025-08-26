@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -10,8 +12,11 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
+
   return (
     <div className="min-h-screen grid place-items-center bg-neutral-100 px-4">
       <Card className="w-full max-w-sm sm:max-w-md md:max-w-lg rounded-2xl shadow-lg bg-white">
@@ -58,7 +63,7 @@ export default function LoginPage() {
             />
           </div>
 
-          <Button className=" cursor-pointer w-full h-10 rounded-lg bg-[#1500FF] hover:bg-[#1200d6] transition-colors">
+          <Button onClick={() => router.push("/")} className=" cursor-pointer w-full h-10 rounded-lg bg-[#1500FF] hover:bg-[#1200d6] transition-colors">
             Continuar
           </Button>
 
