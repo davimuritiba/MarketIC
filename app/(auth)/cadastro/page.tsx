@@ -47,17 +47,17 @@ export default function CadastroPage() {
               Curso
             </label>
             <Select>
-              <SelectTrigger className="h-10 bg-neutral-100">
-                <SelectValue placeholder="Selecione seu curso" />
+              <SelectTrigger className="cursor-pointer h-10 bg-neutral-100">
+                <SelectValue className="cursor-pointer" placeholder="Selecione seu curso" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cc">Ciência da Computação</SelectItem>
-                <SelectItem value="ec">Engenharia da Computação</SelectItem>
+              <SelectContent >
+                <SelectItem className="cursor-pointer" value="cc">Ciência da Computação</SelectItem>
+                <SelectItem className="cursor-pointer" value="ec">Engenharia da Computação</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <Button className="w-full h-10 rounded-lg bg-[#1500FF] hover:bg-[#1200d6] transition-colors">
+          <Button className=" cursor-pointer w-full h-10 rounded-lg bg-[#1500FF] hover:bg-[#1200d6] transition-colors">
             Cadastrar
           </Button>
 

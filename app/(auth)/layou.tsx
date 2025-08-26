@@ -1,9 +1,8 @@
-import "@/styles/globals.css";
+// app/layout.tsx  (ROOT)
+import "@/styles/globals.css"; // <- precisa existir e conter @tailwind base/components/utilities
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "MarketIC",
-};
+export const metadata: Metadata = { title: "MarketIC" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
