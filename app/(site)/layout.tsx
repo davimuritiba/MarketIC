@@ -53,7 +53,6 @@ function HeaderApp() {
                 placeholder="Buscar produtos, marcas e muito mais..."
                 className="flex-1 outline-none text-sm bg-transparent"
               />
-              {/* botão submit minimalista */}
               <button type="submit" className="text-neutral-500 text-sm">
                 ⌕
               </button>
