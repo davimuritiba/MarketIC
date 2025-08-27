@@ -1,6 +1,12 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@tailwind utilities;
+body {
+  font-family: 'M PLUS Rounded 1c', sans-serif;
+  font-weight: 700; /* <- remova isso */
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

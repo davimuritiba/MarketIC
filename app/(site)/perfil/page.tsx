@@ -1,32 +1,59 @@
 import ProfileCard from "@/components/profile/PerfilCard"
+import { AdGridPager } from "@/components/profile/AdCard"
 
 export default function PerfilPage() {
+  const activeAds = [
+    { title: "Livro X", type: "Venda" as const, price: "R$ 39,90" },
+    { title: "Calculadora", type: "Empréstimo" as const, days: 7 },
+    { title: "Memória RAM", type: "Doação" as const },
+    { title: "Monitor", type: "Venda" as const, price: "R$ 499,90" },
+    { title: "Teclado", type: "Empréstimo" as const, days: 10 },
+  ]
+
+  const historyAds = [
+    { title: "Impressora HP", type: "Venda" as const, price: "R$ 299,00" },
+    { title: "Xbox 360", type: "Empréstimo" as const, days: 30 },
+    { title: "Fone de ouvido", type: "Doação" as const },
+    { title: "Notebook", type: "Venda" as const, price: "R$ 1.000,00" },
+    { title: "Câmera", type: "Empréstimo" as const, days: 14 },
+    { title: "HD Externo", type: "Doação" as const },
+  ]
+
   return (
     <div className="max-w-screen-2xl mx-auto px-4 py-6 grid grid-cols-12 gap-6">
       {/* Coluna esquerda */}
-      <div className="col-span-12 md:col-span-4 lg:col-span-3">
+      <div className="col-span-12 md:col-span-4 lg:col-span-3 space-y-10">
         <ProfileCard />
       </div>
 
-      {/* Conteúdo direito */}
+      {/* Coluna direita */}
       <div className="col-span-12 md:col-span-8 lg:col-span-9 space-y-10">
-        <section>
+        <section className="mb-10">
           <h2 className="text-2xl font-semibold mb-4">Anúncios Ativos</h2>
-          {/* Aqui entram cards de anúncios */}
+          <AdGridPager
+            items={activeAds}
+            maxPerPage={4}
+            gridClass="grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
+          />
         </section>
 
         <section>
           <h2 className="text-2xl font-semibold mb-4">Itens adquiridos</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xl text-muted-foreground">
             Nenhum item adquirido ainda
           </p>
         </section>
-
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Histórico de Anúncios</h2>
-          {/* grid com cards */}
-        </section>
       </div>
+
+      {/* Histórico ocupando toda a linha inferior */}
+      <section className="col-span-12">
+        <h2 className="text-2xl font-semibold mb-4">Histórico de Anúncios</h2>
+        <AdGridPager
+          items={historyAds}
+          maxPerPage={5}
+          gridClass="grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+        />
+      </section>
     </div>
   )
 }

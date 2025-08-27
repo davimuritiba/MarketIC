@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ShoppingCart, Mail, User, Plus, Grid2X2 } from "lucide-react";
-import "@/styles/globals.css"; // <- precisa existir e conter @tailwind base/components/utilities
+import "@/styles/globals.css"; 
 
 export const metadata: Metadata = {
   title: "MarketIC",
@@ -11,18 +11,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
-      <body className="bg-neutral-100 text-neutral-900">
-        <HeaderApp />
+    <>
+    <HeaderApp/>
         <main className="mx-auto w-full max-w-screen-2xl px-4 py-6">
           {children}
         </main>
-      </body>
-    </html>
+    </>
   );
 }
 
-/** Header das páginas (exceto /login) — inspirado no seu print */
 function HeaderApp() {
   return (
     <header className="w-full border-b border-neutral-200 bg-white">
@@ -31,7 +28,7 @@ function HeaderApp() {
         <Link href="/" className="flex items-center gap-2 mr-2">
           <div className="w-9 h-9 rounded-full bg-neutral-100 grid place-items-center overflow-hidden">
             <Image
-              src="/images/marketic avatar logo.png" // ajuste o path do seu logo
+              src="/images/marketic avatar logo.png" 
               alt="MarketIC"
               width={24}
               height={24}
