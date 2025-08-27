@@ -162,11 +162,7 @@ function EmptyState({
           <p className="text-lg text-neutral-700">{subtitle}</p>
         </div>
 
-        <Button
-          asChild
-          size="lg"
-          className="bg-[#1500FF] hover:bg-[#1200d6] px-8 h-12 text-lg"
-        >
+        <Button asChild size="lg" className="bg-[#1500FF] hover:bg-[#1200d6] px-8 h-12 text-lg">
           <Link href="/anunciar/novo">Novo Anúncio</Link>
         </Button>
       </div>

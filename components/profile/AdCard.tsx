@@ -4,22 +4,23 @@ import { Card, CardContent } from "@/components/ui/card"
 import { type ElementType, useState } from "react"
 import { Gift, Repeat2, ShoppingBag, ChevronLeft, ChevronRight } from "lucide-react"
 
+export type AdType = "Venda" | "Empréstimo" | "Doação";
+
 interface AdItem {
   title: string
-  type: "Venda" | "Empréstimo" | "Doação"
+  type: AdType;
   price?: string
   days?: number
-  /** Estado de conservação. Ausente em anúncios de doação */
   condition?: "Novo" | "Seminovo" | "Usado"
 }
 
-const typeConfig: Record<AdItem["type"], { icon: ElementType; color: string }> = {
+export const typeConfig: Record<AdItem["type"], { icon: ElementType; color: string }> = {
   Venda: { icon: ShoppingBag, color: "#EC221F" },
-  Empréstimo: { icon: Repeat2, color: "#0A5C0A" },
+  "Empréstimo": { icon: Repeat2, color: "#0A5C0A" },
   Doação: { icon: Gift, color: "#0B0B64" },
 }
 
-/** === Card individual (inalterado) === */
+/** === Card individual === */
 export default function AdCard({ item }: { item: AdItem }) {
   const { icon: Icon, color } = typeConfig[item.type]
   return (
@@ -48,14 +49,6 @@ export default function AdCard({ item }: { item: AdItem }) {
   )
 }
 
-/** === Grade paginada com setas ===
- * Use:
- *  <AdGridPager items={activeAds} maxPerPage={4}
- *    gridClass="grid-cols-2 sm:grid-cols-3 md:grid-cols-4" />
- *
- *  <AdGridPager items={historyAds} maxPerPage={5}
- *    gridClass="grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" />
- */
 export function AdGridPager({
   items,
   maxPerPage,

@@ -1,14 +1,14 @@
 // app/(site)/buscar/page.tsx
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, ElementType } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Star, ImageIcon } from "lucide-react";
+import { Star, ImageIcon, ShoppingBag, Repeat2, Gift } from "lucide-react";
 
 /* ---------- MOCK (substituir por fetch no back depois) ---------- */
 type Produto = {
@@ -29,7 +29,6 @@ const PRODUTOS: Produto[] = [
   { id: "2", titulo: "Livro XY", descricao: "Livro focado no aprendizado de xy", tipo: "Empréstimo", estado: "Seminovo", prazoDias: 15, avaliacoes: 17, rating: 5.0, categoria: "Livros" },
   { id: "3", titulo: "Livro Z", descricao: "Livro focado no aprendizado de z", tipo: "Doação", estado: "Usado", avaliacoes: 9, rating: 4.5, categoria: "Livros" },
   { id: "4", titulo: "Livro X", descricao: "Outra edição do Livro X", tipo: "Venda", estado: "Usado", preco: 269.99, avaliacoes: 163, rating: 3.8, categoria: "Livros" },
-  // adicione mais mocks se quiser
 ];
 
 /* ---------- helpers ---------- */
@@ -39,6 +38,14 @@ const tipoColor: Record<Produto["tipo"], string> = {
   "Doação": "text-indigo-700",
   "Aluguel": "text-amber-700",
 };
+type AdType = "Venda" | "Empréstimo" | "Doação" ;
+
+const typeConfig: Record<AdType, { icon: ElementType; color: string }> = {
+  Venda: { icon: ShoppingBag, color: "#EC221F" },
+  "Empréstimo": { icon: Repeat2, color: "#0A5C0A" },
+  Doação: { icon: Gift, color: "#0B0B64" },
+};
+
 
 const fmtPreco = (v?: number) => (typeof v === "number" ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—");
 
@@ -52,9 +59,9 @@ export default function BuscarPage() {
   const [query, setQuery] = useState(q);
 
   // filtros
-  const [tipo, setTipo] = useState<string>("");       // "", "Venda", "Empréstimo", ...
-  const [estado, setEstado] = useState<string>("");   // "", "Novo", "Seminovo", "Usado"
-  const [preco, setPreco] = useState<string>("");     // "", "0-50", "50-100", "100+"
+  const [tipo, setTipo] = useState<string>("");       
+  const [estado, setEstado] = useState<string>("");   
+  const [preco, setPreco] = useState<string>("");     
 
   // paginação simples
   const [page, setPage] = useState(1);
@@ -69,7 +76,6 @@ export default function BuscarPage() {
     preco ? params.set("preco", preco) : params.delete("preco");
     params.set("page", String(page));
     router.replace(`/buscar?${params.toString()}`);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, tipo, estado, preco, page]);
 
   const results = useMemo(() => {
@@ -113,59 +119,48 @@ export default function BuscarPage() {
 
         <div className="flex items-center gap-2">
           <span className="font-semibold">Tipo</span>
-          <Select onValueChange={(v) => setTipo(v)} value={tipo}>
+          <Select onValueChange={(v) => setTipo(v === "all" ? "" : v)} value={tipo}>
             <SelectTrigger className="h-9 w-44 cursor-pointer">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
-              <SelectItem value="Venda">Venda</SelectItem>
-              <SelectItem value="Empréstimo">Empréstimo</SelectItem>
-              <SelectItem value="Doação">Doação</SelectItem>
-              <SelectItem value="Aluguel">Aluguel</SelectItem>
+              <SelectItem className="cursor-pointer" value="all">Todos</SelectItem>
+              <SelectItem className="cursor-pointer" value="Venda">Venda</SelectItem>
+              <SelectItem className="cursor-pointer" value="Empréstimo">Empréstimo</SelectItem>
+              <SelectItem className="cursor-pointer" value="Doação">Doação</SelectItem>
+              <SelectItem className="cursor-pointer" value="Aluguel">Aluguel</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="font-semibold">Estado de conservação</span>
-          <Select onValueChange={(v) => setEstado(v)} value={estado}>
+          <Select onValueChange={(v) => setEstado(v === "all" ? "" : v)} value={estado}>
             <SelectTrigger className="h-9 w-48 cursor-pointer">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
-              <SelectItem value="Novo">Novo</SelectItem>
-              <SelectItem value="Seminovo">Seminovo</SelectItem>
-              <SelectItem value="Usado">Usado</SelectItem>
+              <SelectItem className="cursor-pointer" value="all">Todos</SelectItem>
+              <SelectItem className="cursor-pointer" value="Novo">Novo</SelectItem>
+              <SelectItem className="cursor-pointer" value="Seminovo">Seminovo</SelectItem>
+              <SelectItem className="cursor-pointer" value="Usado">Usado</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="font-semibold">Preço</span>
-          <Select onValueChange={(v) => setPreco(v)} value={preco}>
+          <Select onValueChange={(v) => setPreco(v === "any" ? "" : v)} value={preco}>
             <SelectTrigger className="h-9 w-40 cursor-pointer">
               <SelectValue placeholder="Qualquer" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Qualquer</SelectItem>
-              <SelectItem value="0-50">até R$ 50</SelectItem>
-              <SelectItem value="50-100">R$ 50–100</SelectItem>
-              <SelectItem value="100+">R$ 100+</SelectItem>
+              <SelectItem className="cursor-pointer" value="any">Qualquer</SelectItem>
+              <SelectItem className="cursor-pointer" value="0-50">até R$ 50</SelectItem>
+              <SelectItem className="cursor-pointer" value="50-100">R$ 50–100</SelectItem>
+              <SelectItem className="cursor-pointer" value="100+">R$ 100+</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-
-        {/* pesquisa inline opcional (além do header) */}
-        <div className="ml-auto flex items-center gap-2">
-          <Input
-            placeholder="Refinar busca..."
-            className="w-64 h-9"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <Button variant="outline" onClick={() => setQuery("")}>Limpar</Button>
         </div>
       </div>
 
@@ -196,6 +191,11 @@ export default function BuscarPage() {
 
 /* ---------- item do resultado (card largo) ---------- */
 function ResultItem({ p }: { p: Produto }) {
+  const cfg = typeConfig[p.tipo as AdType];
+  const Icon = cfg.icon;
+  const color = cfg.color;
+
+  
   return (
     <Card className="bg-white">
       <div className="flex gap-4 p-4 sm:p-6">
@@ -211,9 +211,6 @@ function ResultItem({ p }: { p: Produto }) {
               <h3 className="font-semibold leading-tight">{p.titulo}</h3>
               <p className="text-sm text-muted-foreground line-clamp-2">{p.descricao}</p>
             </div>
-            <Badge className={`bg-transparent border ${tipoColor[p.tipo]} ${/* só cor do texto */""}`}>
-              {p.tipo}
-            </Badge>
           </div>
 
           {/* preço / prazo / rating */}
@@ -236,9 +233,13 @@ function ResultItem({ p }: { p: Produto }) {
           </div>
         </div>
 
-        {/* coluna direita: estado */}
-        <div className="hidden sm:flex items-center justify-end w-28">
-          <span className="text-sm font-semibold text-neutral-700">{p.estado}</span>
+        {/* coluna direita */}
+        <div className="flex flex-col justify-between items-end w-28">
+          <Badge className={`bg-transparent border text-base ${tipoColor[p.tipo]}`}>
+            <Icon className="!w-5 !h-5" style={{ color }} />
+            {p.tipo}
+          </Badge>
+          <span className="text-base font-bold">{p.estado}</span>
         </div>
       </div>
     </Card>
