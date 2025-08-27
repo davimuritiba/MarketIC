@@ -181,7 +181,7 @@ export default function HomePage() {
           <Link
             key={label}
             href={href}
-            className="border bg-neutral-100 rounded-lg p-3 flex flex-col items-center gap-1 hover:bg-neutral-200"
+            className="border bg-white rounded-lg p-3 flex flex-col items-center gap-1 hover:bg-neutral-100"
           >
             <Icon className="w-4 h-4" />
             <span className="text-sm text-center">{label}</span>
@@ -200,7 +200,7 @@ export default function HomePage() {
                 key={c}
                 onClick={() => setCatFilter(catFilter === c ? "" : c)}
                 className={`cursor-pointer border rounded-lg p-3 flex flex-col items-center gap-2 hover:bg-neutral-200 ${
-                  catFilter === c ? "bg-neutral-200" : "bg-neutral-100"
+                  catFilter === c ? "bg-neutral-100" : "bg-white"
                 }`}
               >
                 {Icon && <Icon className="w-5 h-5" />}
@@ -310,7 +310,7 @@ export default function HomePage() {
             <AdGridPager
               items={items.map(toAdItem)}
               maxPerPage={4}
-              gridClass="grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+              gridClass="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
             />
           </div>
         ))}
