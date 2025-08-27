@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Star, ImageIcon, ShoppingBag, Repeat2, Gift } from "lucide-react";
 
 /* ---------- MOCK (substituir por fetch no back depois) ---------- */

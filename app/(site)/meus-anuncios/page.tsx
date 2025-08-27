@@ -2,15 +2,10 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/components/ui/tabs";
+import { Tabs,TabsList, TabsTrigger, TabsContent, } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { AdGridPager } from "@/components/profile/AdCard";
+import { AdGridPager } from "@/components/AdCard";
 
 export default function MeusAnunciosPage() {
   // Você pode trocar esses números por dados reais (fetch/loader)

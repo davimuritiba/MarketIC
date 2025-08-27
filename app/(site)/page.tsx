@@ -2,24 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-import {
-  Plus,
-  Grid2X2,
-  ClipboardList,
-  Heart,
-  BookOpen,
-  Cpu,
-  ImageIcon,
-} from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, } from "@/components/ui/select";
+import { Plus, Grid2X2, ShoppingCart, Heart, BookOpen, Cpu, Dumbbell, Guitar, Boxes, } from "lucide-react";
+import AdCard, { AdGridPager } from "@/components/AdCard";
 
 // ---------- Tipos e mocks ----------
 type Produto = {
@@ -31,6 +16,8 @@ type Produto = {
   preco?: number;
   prazoDias?: number;
   categoria: string;
+  avaliacoes?: number;
+  rating?: number;
 };
 
 const PRODUTOS: Produto[] = [
@@ -42,6 +29,8 @@ const PRODUTOS: Produto[] = [
     estado: "Usado",
     preco: 819,
     categoria: "Eletrônicos",
+    avaliacoes: 4,
+    rating: 4,
   },
   {
     id: "2",
@@ -51,6 +40,8 @@ const PRODUTOS: Produto[] = [
     estado: "Usado",
     prazoDias: 120,
     categoria: "Livros",
+    avaliacoes: 10,
+    rating: 5,
   },
   {
     id: "3",
@@ -59,6 +50,8 @@ const PRODUTOS: Produto[] = [
     tipo: "Doação",
     estado: "Usado",
     categoria: "Eletrônicos",
+    avaliacoes: 2,
+    rating: 4,
   },
   {
     id: "4",
@@ -67,6 +60,8 @@ const PRODUTOS: Produto[] = [
     tipo: "Doação",
     estado: "Usado",
     categoria: "Eletrônicos",
+    avaliacoes: 1,
+    rating: 3,
   },
   {
     id: "5",
@@ -76,15 +71,42 @@ const PRODUTOS: Produto[] = [
     estado: "Novo",
     preco: 100,
     categoria: "Livros",
+    avaliacoes: 5,
+    rating: 4,
+  },
+  {
+    id: "6",
+    titulo: "Bola de Futebol",
+    descricao: "Bola oficial de couro",
+    tipo: "Doação",
+    estado: "Usado",
+    categoria: "Esportes",
+    avaliacoes: 3,
+    rating: 4,
+  },
+  {
+    id: "7",
+    titulo: "Violão Acústico",
+    descricao: "Instrumento para iniciantes",
+    tipo: "Empréstimo",
+    estado: "Usado",
+    prazoDias: 30,
+    categoria: "Hobbies",
+    avaliacoes: 8,
+    rating: 5,
+  },
+  {
+    id: "8",
+    titulo: "Caixa de Ferramentas",
+    descricao: "Conjunto com diversas ferramentas",
+    tipo: "Venda",
+    estado: "Seminovo",
+    preco: 150,
+    categoria: "Outros",
+    avaliacoes: 0,
+    rating: 0,
   },
 ];
-
-const tipoColor: Record<Produto["tipo"], string> = {
-  Venda: "text-red-600",
-  "Empréstimo": "text-green-700",
-  Doação: "text-indigo-700",
-  Aluguel: "text-amber-700",
-};
 
 const fmtPreco = (v?: number) =>
   typeof v === "number"
@@ -126,28 +148,42 @@ export default function HomePage() {
   const actions = [
     { label: "Novo Anúncio", href: "/anunciar/novo", icon: Plus },
     { label: "Meus Anúncios", href: "/meus-anuncios", icon: Grid2X2 },
-    { label: "Solicitações", href: "/solicitacoes", icon: ClipboardList },
+    { label: "Meu Carrinho", href: "/carrinho", icon: ShoppingCart },
     { label: "Favoritas", href: "/favoritas", icon: Heart },
   ];
 
   const catIcons: Record<string, React.ElementType> = {
     Livros: BookOpen,
     "Eletrônicos": Cpu,
+    Esportes: Dumbbell,
+    Hobbies: Guitar,
+    Outros: Boxes,
   };
+
+  type AdItem = React.ComponentProps<typeof AdCard>["item"];
+  const toAdItem = (p: Produto): AdItem => ({
+    title: p.titulo,
+    type: p.tipo as AdItem["type"],
+    price: p.preco ? fmtPreco(p.preco) : undefined,
+    days: p.prazoDias,
+    condition: p.tipo !== "Doação" ? p.estado : undefined,
+    reviews: p.avaliacoes,
+    rating: p.rating,
+  });
 
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-semibold">Olá, Usuário</h1>
 
       {/* ações rápidas */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {actions.map(({ label, href, icon: Icon }) => (
           <Link
             key={label}
             href={href}
-            className="border bg-neutral-100 rounded-lg p-4 flex flex-col items-center gap-2 hover:bg-neutral-200"
+            className="border bg-neutral-100 rounded-lg p-3 flex flex-col items-center gap-1 hover:bg-neutral-200"
           >
-            <Icon className="w-5 h-5" />
+            <Icon className="w-4 h-4" />
             <span className="text-sm text-center">{label}</span>
           </Link>
         ))}
@@ -163,7 +199,7 @@ export default function HomePage() {
               <button
                 key={c}
                 onClick={() => setCatFilter(catFilter === c ? "" : c)}
-                className={`border rounded-lg p-4 flex flex-col items-center gap-2 hover:bg-neutral-200 ${
+                className={`cursor-pointer border rounded-lg p-3 flex flex-col items-center gap-2 hover:bg-neutral-200 ${
                   catFilter === c ? "bg-neutral-200" : "bg-neutral-100"
                 }`}
               >
@@ -271,11 +307,11 @@ export default function HomePage() {
         {Object.entries(grouped).map(([cat, items]) => (
           <div key={cat} className="mt-6">
             <h3 className="text-xl font-semibold mb-3">{cat}</h3>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {items.map((p) => (
-                <ProdutoCard key={p.id} p={p} />
-              ))}
-            </div>
+            <AdGridPager
+              items={items.map(toAdItem)}
+              maxPerPage={4}
+              gridClass="grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+            />
           </div>
         ))}
 
@@ -286,34 +322,5 @@ export default function HomePage() {
         )}
       </section>
     </div>
-  );
-}
-
-// ---------- Card de produto ----------
-function ProdutoCard({ p }: { p: Produto }) {
-  return (
-    <Card className="bg-white">
-      <CardContent className="p-4 space-y-3">
-        <div className="w-full h-40 rounded-md border bg-neutral-100 grid place-items-center">
-          <ImageIcon className="w-10 h-10 text-neutral-400" />
-        </div>
-        <Badge
-          variant="outline"
-          className={`border-current ${tipoColor[p.tipo]}`}
-        >
-          {p.tipo}
-        </Badge>
-        <h4 className="font-semibold leading-tight">{p.titulo}</h4>
-        <p className="text-sm text-muted-foreground line-clamp-2">{p.descricao}</p>
-        <div className="flex items-center justify-between text-sm">
-          {p.preco ? <span className="font-semibold">{fmtPreco(p.preco)}</span> : p.prazoDias ? (
-            <span>{p.prazoDias} Dias</span>
-          ) : (
-            <span />
-          )}
-          <span className="text-muted-foreground">{p.estado}</span>
-        </div>
-      </CardContent>
-    </Card>
   );
 }

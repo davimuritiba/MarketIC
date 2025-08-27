@@ -1,5 +1,5 @@
 import ProfileCard from "@/components/profile/PerfilCard"
-import { AdGridPager } from "@/components/profile/AdCard"
+import { AdGridPager } from "@/components/AdCard"
 
 export default function PerfilPage() {
   const activeAds = [
