@@ -3,19 +3,19 @@ import { AdGridPager } from "@/components/profile/AdCard"
 
 export default function PerfilPage() {
   const activeAds = [
-    { title: "Livro X", type: "Venda" as const, price: "R$ 39,90" },
-    { title: "Calculadora", type: "Empréstimo" as const, days: 7 },
+    { title: "Livro X", type: "Venda" as const, price: "R$ 39,90", condition: "Novo" as "Novo" },
+    { title: "Calculadora", type: "Empréstimo" as const, days: 7, condition: "Seminovo" as "Seminovo" },
     { title: "Memória RAM", type: "Doação" as const },
-    { title: "Monitor", type: "Venda" as const, price: "R$ 499,90" },
-    { title: "Teclado", type: "Empréstimo" as const, days: 10 },
+    { title: "Monitor", type: "Venda" as const, price: "R$ 499,90", condition: "Seminovo" as "Seminovo" },
+    { title: "Teclado", type: "Empréstimo" as const, days: 10, condition: "Usado" as "Usado" },
   ]
 
   const historyAds = [
-    { title: "Impressora HP", type: "Venda" as const, price: "R$ 299,00" },
-    { title: "Xbox 360", type: "Empréstimo" as const, days: 30 },
+    { title: "Impressora HP", type: "Venda" as const, price: "R$ 299,00", condition: "Usado" as "Usado" },
+    { title: "Xbox 360", type: "Empréstimo" as const, days: 30, condition: "Seminovo" as "Seminovo" },
     { title: "Fone de ouvido", type: "Doação" as const },
-    { title: "Notebook", type: "Venda" as const, price: "R$ 1.000,00" },
-    { title: "Câmera", type: "Empréstimo" as const, days: 14 },
+    { title: "Notebook", type: "Venda" as const, price: "R$ 1.000,00", condition: "Usado" as "Usado" },
+    { title: "Câmera", type: "Empréstimo" as const, days: 14, condition: "Novo" as "Novo" },
     { title: "HD Externo", type: "Doação" as const },
   ]
 

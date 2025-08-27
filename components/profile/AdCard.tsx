@@ -9,6 +9,8 @@ interface AdItem {
   type: "Venda" | "Empréstimo" | "Doação"
   price?: string
   days?: number
+  /** Estado de conservação. Ausente em anúncios de doação */
+  condition?: "Novo" | "Seminovo" | "Usado"
 }
 
 const typeConfig: Record<AdItem["type"], { icon: ElementType; color: string }> = {
@@ -23,19 +25,24 @@ export default function AdCard({ item }: { item: AdItem }) {
   return (
     <Card className="p-4 border-2" style={{ borderColor: color }}>
       <div className="mb-4 aspect-square w-full rounded-md bg-muted" />
-      <CardContent className="p-0 space-y-1">
+      <CardContent className="p-0 space-y-2">
         <div className="flex items-center gap-2" style={{ color }}>
           <Icon className="w-4 h-4" />
           <span className="font-medium">{item.type}</span>
         </div>
         <h3 className="font-medium">{item.title}</h3>
-        <p className="text-sm text-muted-foreground">
-          {item.type === "Venda"
-            ? item.price
-            : item.type === "Empréstimo"
-            ? `${item.days} dias`
-            : "Não possui classificação"}
-        </p>
+        <div className="flex items-center justify-between text-sm">
+          <p className="text-muted-foreground">
+            {item.type === "Venda"
+              ? item.price
+              : item.type === "Empréstimo"
+              ? `${item.days} dias`
+              : "Não possui classificação"}
+          </p>
+          {item.type !== "Doação" && item.condition && (
+            <span className="font-bold text-sm sm:text-base">{item.condition}</span>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

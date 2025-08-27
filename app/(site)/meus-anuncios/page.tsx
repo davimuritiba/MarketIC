@@ -21,7 +21,7 @@ export default function MeusAnunciosPage() {
   const finalizados = [
     { title: "Produto A", type: "Venda" as "Venda", price: "R$ 100,00", condition: "Novo" as "Novo" },
     { title: "Produto B", type: "Empréstimo" as "Empréstimo", days: 7, condition: "Seminovo" as "Seminovo" },
-    { title: "Produto C", type: "Doação" as "Doação", condition: "Usado" as "Usado" },
+    { title: "Produto C", type: "Doação" as "Doação" },
   ];
 
   const expirados = [
@@ -43,9 +43,15 @@ export default function MeusAnunciosPage() {
 
       <Tabs defaultValue="publicados" className="w-full">
         {/* Abas */}
-        <TabsList className="h-auto w-fit mx-auto justify-center gap-8 bg-transparent p-0 border-b border-neutral-300">
+        <TabsList
+          className="flex h-auto w-full overflow-x-auto whitespace-nowrap justify-between sm:justify-center gap-4 sm:gap-8 bg-transparent p-0 border-b border-neutral-300"
+        >
           <TabItem value="publicados" label="Publicados" count={counts.publicados} />
-          <TabItem value="aguardando" label="Aguardando Publicação" count={counts.aguardando} />
+          <TabItem
+            value="aguardando"
+            label="Aguardando Publicação"
+            count={counts.aguardando}
+          />
           <TabItem value="finalizados" label="Finalizados" count={counts.finalizados} />
           <TabItem value="inativos" label="Inativos" count={counts.inativos} />
           <TabItem value="expirados" label="Expirados" count={counts.expirados} />
@@ -75,7 +81,7 @@ export default function MeusAnunciosPage() {
             <AdGridPager
               items={finalizados}
               maxPerPage={4}
-              gridClass="grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
+              gridClass="grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
             />
           )}
         </TabsContent>
@@ -93,11 +99,11 @@ export default function MeusAnunciosPage() {
             <EmptyState subtitle="Sem anúncios expirados no momento." />
           ) : (
             <div className="space-y-4">
-              <Button className="bg-[#1500FF] hover:bg-[#1200d6]">Renovar</Button>
+              <Button className="bg-[#1500FF] hover:bg-[#1200d6] px-6 h-10 sm:h-12 text-sm sm:text-base">Renovar</Button>
               <AdGridPager
                 items={expirados}
                 maxPerPage={4}
-                gridClass="grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
+                gridClass="grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
               />
             </div>
           )}
@@ -106,8 +112,6 @@ export default function MeusAnunciosPage() {
     </div>
   );
 }
-
-/* ---------- Components auxiliares (no mesmo arquivo por praticidade) ---------- */
 
 function TabItem({
   value,
@@ -123,7 +127,7 @@ function TabItem({
     <TabsTrigger
       value={value}
       className={[
-        "relative rounded-none bg-transparent px-0 pb-3 text-base cursor-pointer",
+        "relative rounded-none bg-transparent px-0 pb-3 text-sm sm:text-base cursor-pointer",
         "data-[state=active]:text-blue-700 data-[state=active]:bg-transparent data-[state=active]:hover:bg-transparent",
         // underline
         "after:absolute after:left-0 after:right-0 after:-bottom-[1px] after:h-[2px] after:bg-blue-600",

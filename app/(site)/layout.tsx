@@ -3,32 +3,38 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ShoppingCart, Mail, User, Plus, Grid2X2 } from "lucide-react";
-import "@/styles/globals.css"; 
+import "@/styles/globals.css"; // <- precisa existir e conter @tailwind base/components/utilities
 
 export const metadata: Metadata = {
   title: "MarketIC",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-    <HeaderApp/>
-        <main className="mx-auto w-full max-w-screen-2xl px-4 py-6">
-          {children}
-        </main>
+      <HeaderApp />
+      <main className="mx-auto w-full max-w-screen-2xl px-4 sm:px-6 py-6">
+        {children}
+      </main>
     </>
   );
 }
 
+/** Header das páginas (exceto /login) — inspirado no seu print */
 function HeaderApp() {
   return (
     <header className="w-full border-b border-neutral-200 bg-white">
-      <div className="mx-auto w-full max-w-screen-2xl px-4 h-14 flex items-center gap-3">
+      <div className="mx-auto w-full max-w-screen-2xl px-4 h-auto min-h-14 flex flex-wrap items-center gap-3">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 mr-2">
           <div className="w-9 h-9 rounded-full bg-neutral-100 grid place-items-center overflow-hidden">
             <Image
-              src="/images/marketic avatar logo.png" 
+              src="/images/marketic avatar logo.png" // ajuste o path do seu logo
               alt="MarketIC"
               width={24}
               height={24}
@@ -41,7 +47,7 @@ function HeaderApp() {
         {/* Busca */}
         <form
           action="/buscar"
-          className="flex-1 max-w-3xl"
+          className="order-last w-full md:order-none md:flex-1 md:max-w-3xl"
         >
           <label className="w-full">
             <div className="flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-3 h-9">
@@ -58,10 +64,10 @@ function HeaderApp() {
         </form>
 
         {/* Ações à direita */}
-        <nav className="ml-2 flex items-center gap-4">
+        <nav className="ml-auto flex flex-wrap items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
           <Link
             href="/meus-anuncios"
-            className="hidden sm:flex items-center gap-2 text-sm hover:opacity-80"
+            className="flex items-center gap-2 text-sm hover:opacity-80"
             title="Meus anúncios"
           >
             <Grid2X2 size={18} />
