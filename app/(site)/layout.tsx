@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ShoppingCart, Mail, User, Plus, Grid2X2 } from "lucide-react";
-import "@/styles/globals.css"; // <- precisa existir e conter @tailwind base/components/utilities
+import "@/styles/globals.css"; 
 
 export const metadata: Metadata = {
   title: "MarketIC",
@@ -25,7 +25,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   );
 }
 
-/** Header das páginas (exceto /login) — inspirado no seu print */
 function HeaderApp() {
   return (
     <header className="w-full border-b border-neutral-200 bg-white">
@@ -98,13 +97,31 @@ function HeaderApp() {
             <Mail size={18} />
           </Link>
 
-          <Link
-            href="/perfil"
-            className="flex items-center justify-center rounded-full bg-neutral-200 w-9 h-9"
-            title="Perfil"
-          >
-            <User size={18} />
-          </Link>
+          <details className="relative">
+            <summary className="flex items-center justify-center rounded-full bg-neutral-200 w-9 h-9 cursor-pointer [&::-webkit-details-marker]:hidden" title="Perfil">
+              <User size={18} />
+            </summary>
+            <div className="absolute right-0 mt-2 w-40 rounded-md border border-neutral-200 bg-white shadow-md flex flex-col">
+              <Link
+                href="/perfil"
+                className="px-4 py-2 text-sm hover:bg-neutral-100"
+              >
+                Meu perfil
+              </Link>
+              <Link
+                href="/meus-anuncios"
+                className="px-4 py-2 text-sm hover:bg-neutral-100"
+              >
+                Meus Anúncios
+              </Link>
+              <Link
+                href="/carrinho"
+                className="px-4 py-2 text-sm hover:bg-neutral-100"
+              >
+                Meu carrinho
+              </Link>
+            </div>
+          </details>
         </nav>
       </div>
     </header>
