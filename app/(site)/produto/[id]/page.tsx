@@ -2,11 +2,7 @@
 
 import { Star, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage, } from "@/components/ui/avatar";
 
 export default function ProdutoPage({ params }: { params: { id: string } }) {
   const stars = Array.from({ length: 5 });
@@ -28,6 +24,9 @@ export default function ProdutoPage({ params }: { params: { id: string } }) {
   ];
   const avgRating =
     reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length;
+  const itemCount = 10;
+  const condition = "Novo";
+  const type = "Venda";
   return (
     <div className="space-y-8">
       <section className="grid gap-8 md:grid-cols-2 bg-white p-6 rounded-md">
@@ -48,38 +47,50 @@ export default function ProdutoPage({ params }: { params: { id: string } }) {
             <div className="flex-1">
               <h2 className="text-xl font-semibold">Nome do vendedor</h2>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex text-yellow-500">
-                    {stars.map((_, i) => (
-                      <Star
-                        key={i}
-                        size={16}
-                        className={i < 4 ? "fill-current" : ""}
-                      />
-                    ))}
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <div className="flex text-yellow-500">
+                      {stars.map((_, i) => (
+                        <Star
+                          key={i}
+                          size={16}
+                          className={i < 4 ? "fill-current" : ""}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {avgRating.toFixed(1)} de 5
+                    </span>
                   </div>
-                  <span className="text-sm text-muted-foreground">4.2 de 5</span>
+                  <span className="text-sm text-muted-foreground">
+                    {reviews.length} avaliações
+                  </span>
                 </div>
                 <div className="flex items-center gap-1 text-red-500">
                   <ShoppingBag className="w-5 h-5" />
-                  <span className="text-base font-medium">Venda</span>
+                  <span className="text-base font-medium">{type}</span>
                 </div>
               </div>
             </div>
           </div>
-          <h1 className="text-2xl font-bold">Produto X</h1>
-          <p className="text-xl font-bold">R$ 129,99</p>
+          <div className="h-px bg-black" />
+          <div className="flex justify-between items-baseline">
+            <h1 className="text-2xl font-bold">Livro X</h1>
+            <p className="text-lg font-medium ">{condition}</p>
+          </div>
+          <p className="text-sm text-muted-foreground -mt-3">{itemCount} itens</p>
+          <p className="text-2xl font-bold mt-3">R$ 129,99</p>
           <div>
-            <h3 className="text-lg font-semibold mb-1">Descrição</h3>
+            <h3 className="text-xl font-semibold mb-1">Descrição</h3>
             <p className="text-base text-muted-foreground">
               "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur."
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button className="flex-1 bg-[#1500FF] hover:bg-[#1200d6]">
+            <Button className="cursor-pointer flex-1 bg-[#1500FF] hover:bg-[#1200d6]">
               Mostrar interesse
             </Button>
-            <Button className="flex-1 bg-blue-400 hover:bg-blue-500 text-white">
+            <Button className="cursor-pointer flex-1 bg-blue-400 hover:bg-blue-500 text-white">
               Adicionar ao carrinho
             </Button>
           </div>
