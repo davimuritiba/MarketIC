@@ -9,7 +9,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Button } from "@/components/ui/button";
 import { Star, ImageIcon, ShoppingBag, Repeat2, Gift } from "lucide-react";
 
-/* ---------- MOCK (substituir por fetch no back depois) ---------- */
+/* ---------- (substituir por fetch no back depois) ---------- */
 type Produto = {
   id: string;
   titulo: string;

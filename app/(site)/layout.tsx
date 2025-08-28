@@ -33,7 +33,7 @@ function HeaderApp() {
         <Link href="/" className="flex items-center gap-2 mr-2">
           <div className="w-9 h-9 rounded-full bg-neutral-100 grid place-items-center overflow-hidden">
             <Image
-              src="/images/marketic avatar logo.png" // ajuste o path do seu logo
+              src="/images/marketic avatar logo.png" 
               alt="MarketIC"
               width={24}
               height={24}

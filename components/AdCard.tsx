@@ -17,11 +17,8 @@ interface AdItem {
   type: "Venda" | "Empréstimo" | "Doação"
   price?: string
   days?: number
-  /** Estado de conservação. Ausente em anúncios de doação */
   condition?: "Novo" | "Seminovo" | "Usado"
-  /** Classificação média (0-5) */
   rating?: number
-  /** Número de avaliações */
   reviews?: number
 }
 
@@ -31,7 +28,7 @@ const typeConfig: Record<AdItem["type"], { icon: ElementType; color: string }> =
   Doação: { icon: Gift, color: "#0B0B64" },
 }
 
-/** === Card individual (inalterado) === */
+/** === Card individual === */
 export default function AdCard({ item }: { item: AdItem }) {
   const { icon: Icon, color } = typeConfig[item.type]
   return (
@@ -78,14 +75,7 @@ export default function AdCard({ item }: { item: AdItem }) {
   )
 }
 
-/** === Grade paginada com setas ===
- * Use:
- *  <AdGridPager items={activeAds} maxPerPage={4}
- *    gridClass="grid-cols-2 sm:grid-cols-3 md:grid-cols-4" />
- *
- *  <AdGridPager items={historyAds} maxPerPage={5}
- *    gridClass="grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" />
- */
+/** === Grade paginada com setas === */
 export function AdGridPager({
   items,
   maxPerPage,
@@ -93,7 +83,7 @@ export function AdGridPager({
 }: {
   items: AdItem[]
   maxPerPage: number // 4 (Ativos) | 5 (Histórico)
-  gridClass: string  // defina as colunas responsivas
+  gridClass: string  // colunas responsivas
 }) {
   const [page, setPage] = useState(0)
   const totalPages = Math.max(1, Math.ceil(items.length / maxPerPage))

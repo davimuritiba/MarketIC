@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { M_PLUS_Rounded_1c } from "next/font/google"
 
 const mplus = M_PLUS_Rounded_1c({
-  weight: ["700"], // Bold
+  weight: ["700"], 
   subsets: ["latin"],
   display: "swap",
 })

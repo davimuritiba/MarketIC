@@ -20,9 +20,7 @@ interface Item {
   descricao: string;
   tipo: "Venda" | "Empréstimo" | "Doação";
   estado: "Novo" | "Seminovo" | "Usado";
-  /** Preço do item quando for uma venda */
   preco?: number;
-  /** Quantidade de dias em um empréstimo */
   dias?: number;
   interested?: boolean;
   quantidade: number;

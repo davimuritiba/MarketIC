@@ -8,7 +8,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AdGridPager } from "@/components/AdCard";
 
 export default function MeusAnunciosPage() {
-  // Você pode trocar esses números por dados reais (fetch/loader)
   const publicados: any[] = [];
   const aguardando: any[] = [];
   const inativos: any[] = [];
@@ -57,7 +56,7 @@ export default function MeusAnunciosPage() {
           {counts.publicados === 0 ? (
             <EmptyState />
           ) : (
-            <div> {/* sua grid/tabela de anúncios publicados aqui */}</div>
+            <div> {/* tabela de anúncios publicados aqui */}</div>
           )}
         </TabsContent>
 
