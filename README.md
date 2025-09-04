@@ -1,5 +1,8 @@
 # Projeto de Programação Web
 
+## MarketIC
+Projeto de um marketplace para o Instituto de Computação (IC)
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
