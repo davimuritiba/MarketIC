@@ -1,4 +1,4 @@
-# Projeto de Programação Web
+# Projeto de Programação Web.
 
 ## MarketIC
 Projeto de um marketplace para o Instituto de Computação (IC)
