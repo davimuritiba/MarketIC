@@ -1,8 +1,9 @@
 "use client";
 
-import { Star, ShoppingBag } from "lucide-react";
+import { Star, ShoppingBag, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage, } from "@/components/ui/avatar";
+import { useState } from "react";
 
 export default function ProdutoPage({ params }: { params: { id: string } }) {
   const stars = Array.from({ length: 5 });
@@ -27,14 +28,26 @@ export default function ProdutoPage({ params }: { params: { id: string } }) {
   const itemCount = 10;
   const condition = "Novo";
   const type = "Venda";
+  const [interested, setInterested] = useState(false);
+  const [inCart, setInCart] = useState(false);
+  const [favorited, setFavorited] = useState(false);
   return (
     <div className="space-y-8">
       <section className="grid gap-8 md:grid-cols-2 bg-white p-6 rounded-md">
         <div>
-          <div className="w-full aspect-square bg-neutral-200 rounded-md" />
+          <img
+            src="/images/livro.png"
+            alt="Imagem do produto"
+            className="w-full aspect-square object-cover rounded-md"
+          />
           <div className="flex gap-2 mt-2">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="w-16 h-16 bg-neutral-200 rounded-md" />
+              <img
+                key={i}
+                src="/images/livro.png"
+                alt="Imagem do produto"
+                className="w-16 h-16 object-cover rounded-md"
+              />
             ))}
           </div>
         </div>
@@ -76,7 +89,19 @@ export default function ProdutoPage({ params }: { params: { id: string } }) {
           <div className="h-px bg-black" />
           <div className="flex justify-between items-baseline">
             <h1 className="text-2xl font-bold">Livro X</h1>
-            <p className="text-lg font-medium ">{condition}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-lg font-medium">{condition}</p>
+              <button
+                aria-label="Adicionar aos favoritos"
+                className={`hover:text-red-500 ${favorited ? "text-red-500" : "text-gray-400"}`}
+                onClick={() => setFavorited((prev) => !prev)}
+              >
+                <Heart
+                  className="w-5 h-5"
+                  fill={favorited ? "currentColor" : "none"}
+                />
+              </button>
+            </div>
           </div>
           <p className="text-sm text-muted-foreground -mt-3">{itemCount} itens</p>
           <p className="text-2xl font-bold mt-3">R$ 129,99</p>
@@ -87,11 +112,18 @@ export default function ProdutoPage({ params }: { params: { id: string } }) {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button className="cursor-pointer flex-1 bg-[#1500FF] hover:bg-[#1200d6]">
-              Mostrar interesse
+            <Button
+              className="cursor-pointer flex-1 bg-[#1500FF] hover:bg-[#1200d6]"
+              onClick={() => setInterested((prev) => !prev)}
+            >
+              {interested ? "Interesse demonstrado" : "Mostrar interesse"}
             </Button>
-            <Button className="cursor-pointer flex-1 bg-blue-400 hover:bg-blue-500 text-white">
-              Adicionar ao carrinho
+            <Button
+              className="cursor-pointer flex-1 bg-blue-400 hover:bg-blue-500 text-white"
+              disabled={inCart}
+              onClick={() => setInCart(true)}
+            >
+              {inCart ? "Adicionado" : "Adicionar ao carrinho"}
             </Button>
           </div>
         </div>

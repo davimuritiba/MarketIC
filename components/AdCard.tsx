@@ -3,14 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
 import { type ElementType, useState } from "react"
-import {
-  Gift,
-  Repeat2,
-  ShoppingBag,
-  ChevronLeft,
-  ChevronRight,
-  Star,
-} from "lucide-react"
+import { Gift, Repeat2, ShoppingBag, ChevronLeft, ChevronRight, Star, } from "lucide-react"
 
 interface AdItem {
   title: string
@@ -20,6 +13,7 @@ interface AdItem {
   condition?: "Novo" | "Seminovo" | "Usado"
   rating?: number
   reviews?: number
+  image?: string
 }
 
 const typeConfig: Record<AdItem["type"], { icon: ElementType; color: string }> = {
@@ -34,7 +28,15 @@ export default function AdCard({ item }: { item: AdItem }) {
   return (
     <Link href="/produto/1" className="block">
       <Card className="p-3 border" style={{ borderColor: color }}>
-        <div className="mb-2 aspect-square w-full rounded-md bg-muted" />
+        {item.image ? (
+          <img
+            src={item.image}
+            alt={item.title}
+            className="mb-2 aspect-square w-full rounded-md object-cover"
+          />
+        ) : (
+          <div className="mb-2 aspect-square w-full rounded-md bg-muted" />
+        )}
         <CardContent className="p-0 space-y-1">
           <div className="flex items-center gap-2" style={{ color }}>
             <Icon className="w-4 h-4" />

@@ -18,6 +18,7 @@ type Produto = {
   categoria: string;
   avaliacoes?: number;
   rating?: number;
+  imagem?: string;
 };
 
 const PRODUTOS: Produto[] = [
@@ -31,6 +32,7 @@ const PRODUTOS: Produto[] = [
     categoria: "Eletrônicos",
     avaliacoes: 4,
     rating: 4,
+    imagem: "/images/impressora.jpeg",
   },
   {
     id: "2",
@@ -42,6 +44,7 @@ const PRODUTOS: Produto[] = [
     categoria: "Livros",
     avaliacoes: 10,
     rating: 5,
+    imagem: "/images/livro.png",
   },
   {
     id: "3",
@@ -52,6 +55,7 @@ const PRODUTOS: Produto[] = [
     categoria: "Eletrônicos",
     avaliacoes: 2,
     rating: 4,
+    imagem: "/images/arduino.jpeg",
   },
   {
     id: "4",
@@ -62,6 +66,7 @@ const PRODUTOS: Produto[] = [
     categoria: "Eletrônicos",
     avaliacoes: 1,
     rating: 3,
+    imagem: "/images/memoriaram.jpeg",
   },
   {
     id: "5",
@@ -73,6 +78,7 @@ const PRODUTOS: Produto[] = [
     categoria: "Livros",
     avaliacoes: 5,
     rating: 4,
+    imagem: "/images/livro.png",
   },
   {
     id: "6",
@@ -83,6 +89,7 @@ const PRODUTOS: Produto[] = [
     categoria: "Esportes",
     avaliacoes: 3,
     rating: 4,
+    imagem: "/images/bola.jpeg",
   },
   {
     id: "7",
@@ -94,6 +101,7 @@ const PRODUTOS: Produto[] = [
     categoria: "Hobbies",
     avaliacoes: 8,
     rating: 5,
+    imagem: "/images/violao.jpeg",
   },
   {
     id: "8",
@@ -105,6 +113,7 @@ const PRODUTOS: Produto[] = [
     categoria: "Outros",
     avaliacoes: 0,
     rating: 0,
+    imagem: "/images/caixa.jpeg",
   },
 ];
 
@@ -169,6 +178,7 @@ export default function HomePage() {
     condition: p.tipo !== "Doação" ? p.estado : undefined,
     reviews: p.avaliacoes,
     rating: p.rating,
+    image: p.imagem,
   });
 
   return (
