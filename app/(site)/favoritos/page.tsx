@@ -37,7 +37,7 @@ export default function FavoritasPage() {
 
   return (
     <div className="max-w-screen-lg w-full px-4 md:px-8 mx-auto space-y-6">
-      <h1 className="text-2xl font-semibold">Favoritas</h1>
+      <h1 className="text-2xl font-semibold">Favoritos</h1>
 
       {items.length === 0 && (
         <div className="text-center text-muted-foreground py-20">

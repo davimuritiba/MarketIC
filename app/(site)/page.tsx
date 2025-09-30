@@ -158,7 +158,7 @@ export default function HomePage() {
     { label: "Novo Anúncio", href: "/anunciar/novo", icon: Plus },
     { label: "Meus Anúncios", href: "/meus-anuncios", icon: Grid2X2 },
     { label: "Meu Carrinho", href: "/carrinho", icon: ShoppingCart },
-    { label: "Favoritas", href: "/favoritas", icon: Heart },
+    { label: "Favoritos", href: "/favoritos", icon: Heart },
   ];
 
   const catIcons: Record<string, React.ElementType> = {
