@@ -1,0 +1,171 @@
+// schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =======================
+// ENUMS
+// =======================
+enum TipoTransacao {
+  VENDA
+  TROCA
+  DOACAO
+  EMPRESTIMO
+}
+
+enum EstadoConservacao {
+  NOVO
+  SEMINOVO
+  USADO
+}
+
+enum StatusInteresse {
+  PENDENTE
+  ACEITO
+  RECUSADO
+}
+
+// =======================
+// MODELS
+// =======================
+
+// Categoria
+model Categoria {
+  id    String  @id @default(uuid()) @db.Uuid
+  nome  String  @unique
+  slug  String? @unique
+
+  itens Item[]
+}
+
+// Usuário
+model Usuario {
+  id                  String   @id @default(uuid()) @db.Uuid
+  CPF                 String   @unique
+  RG                  String   @unique
+  nome                String
+  email_institucional String   @unique
+  senha               String
+  telefone            String
+  data_nascimento     DateTime
+  reputacao_media     Float    @default(0)
+  reputacao_count     Int?
+  curso               String
+  foto_documento_url  String
+
+  itens        Item[]
+  avaliacoes   AvaliacaoItem[] @relation("UsuarioAvaliacoes")
+  interesses   Interesse[]
+  favoritos    Favorito[]
+  carrinho     CarrinhoItem[]
+  criados      AvaliacaoItem[] @relation("CriadorAvaliacao")
+  sessions     Session[]       
+}
+
+// Item / Anúncio
+model Item {
+  id                    String   @id @default(uuid()) @db.Uuid
+  usuario_id            String   @db.Uuid
+  categoria_id          String   @db.Uuid
+  titulo                String
+  descricao             String?
+  tipo_transacao        TipoTransacao
+  estado_conservacao    EstadoConservacao
+  preco                 Float?
+  prazo_dias            Int?
+  quantidade_disponivel Int      @default(1)
+
+  usuario    Usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  categoria  Categoria @relation(fields: [categoria_id], references: [id])
+  imagens    ImagemAnuncio[]
+  avaliacoes AvaliacaoItem[]
+  interesses Interesse[]
+  favoritos  Favorito[]
+  carrinhos  CarrinhoItem[]
+}
+
+// Imagem do Anúncio
+model ImagemAnuncio {
+  id         String @id @default(uuid()) @db.Uuid
+  anuncio_id String @db.Uuid
+  url        String
+  ordem      Int
+
+  item Item @relation(fields: [anuncio_id], references: [id])
+}
+
+// Avaliação de um Item
+model AvaliacaoItem {
+  id                String   @id @default(uuid()) @db.Uuid
+  usuario_id        String   @db.Uuid
+  anuncio_id        String   @db.Uuid
+  nota              Float
+  titulo            String?
+  comentario        String?
+  data              DateTime @default(now())
+  resposta_vendedor String?
+  respondido_em     DateTime?
+  criado_por        String?  @db.Uuid
+
+  usuario Usuario  @relation("UsuarioAvaliacoes", fields: [usuario_id], references: [id])
+  item    Item     @relation(fields: [anuncio_id], references: [id])
+  criador Usuario? @relation("CriadorAvaliacao", fields: [criado_por], references: [id])
+}
+
+// Interesse em um Item
+model Interesse {
+  id         String          @id @default(uuid()) @db.Uuid
+  usuario_id String          @db.Uuid
+  anuncio_id String          @db.Uuid
+  quantidade Int             @default(1)
+  status     StatusInteresse @default(PENDENTE)
+  created_at DateTime        @default(now())
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+  item    Item    @relation(fields: [anuncio_id], references: [id])
+}
+
+// Item no Carrinho
+model CarrinhoItem {
+  id              String   @id @default(uuid()) @db.Uuid
+  usuario_id      String   @db.Uuid
+  anuncio_id      String   @db.Uuid
+  quantidade      Int      @default(1)
+  interested_flag Boolean  @default(false)
+  prazo_snapshot  Int?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+  item    Item    @relation(fields: [anuncio_id], references: [id])
+
+  @@unique([usuario_id, anuncio_id])
+}
+
+// Favorito
+model Favorito {
+  id         String   @id @default(uuid()) @db.Uuid
+  usuario_id String   @db.Uuid
+  anuncio_id String   @db.Uuid
+  created_at DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+  item    Item    @relation(fields: [anuncio_id], references: [id])
+
+  @@unique([usuario_id, anuncio_id])
+}
+
+//Mantém o sistema de sessão do usuário, mantendo a sessão dele ativa.
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique
+  usuario_id  String   @db.Uuid
+  usuario   Usuario  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
