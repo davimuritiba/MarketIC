@@ -1,4 +1,3 @@
-// app/(site)/anunciar/novo/page.tsx
 "use client";
 
 import { useRef, useState } from "react";
@@ -11,8 +10,47 @@ import { ImageIcon } from "lucide-react";
 
 export default function NovoAnuncioPage() {
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const [fileName, setFileName] = useState<string>("");
-  const [categoria, setCategoria] = useState<string>("");
+  
+  const [titulo, setTitulo] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [categoria, setCategoria] = useState("");
+  const [tipoTransacao, setTipoTransacao] = useState("");
+  const [estadoConservacao, setEstadoConservacao] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [mensagem, setMensagem] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setMensagem("Enviando...");
+
+    try{
+      const res = await fetch("/api/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          titulo,
+          descricao,
+          tipo_transacao: tipoTransacao.toUpperCase(),
+          estado_conservacao: estadoConservacao.toUpperCase(),
+          preco: 0,
+          usuario_id: "6398473e-461e-4a07-a76e-111f627ef873", //temp
+          categoria_id: "c0d49de1-54dc-409b-99c2-8f0af6867ae7" //temp
+        }),
+      });
+
+      if (!res.ok) throw new Error("Erro ao criar o anúncio");
+
+      setMensagem("Anúncio criado com sucesso!");
+      setTitulo("");
+      setDescricao("");
+      setCategoria("");
+      setTipoTransacao("");
+      setEstadoConservacao("");
+      setFileName("");
+    } catch (error) {
+      setMensagem("Erro ao criar o anúncio.");
+    }
+  }
 
   return (
     <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -20,17 +58,29 @@ export default function NovoAnuncioPage() {
 
       {/* painel principal */}
       <section className="rounded-xl border bg-white p-4 sm:p-6 md:p-8 shadow-sm">
-        <form className="space-y-8">
+        <form className="space-y-8" onSubmit={handleSubmit}>
           {/* Título */}
           <div className="space-y-2">
             <Label htmlFor="titulo" className="text-base font-semibold">Título</Label>
-            <Input id="titulo" placeholder="Adicione um título" className="h-10" />
+            <Input 
+              id="titulo" 
+              value={titulo} 
+              onChange={(e) => setTitulo(e.target.value)}
+              placeholder="Adicione um título"
+              className="h-10" 
+            />
           </div>
 
           {/* Descrição */}
           <div className="space-y-2">
             <Label htmlFor="descricao" className="text-base font-semibold">Descrição</Label>
-            <Textarea id="descricao" placeholder="Adicione uma descrição" className="min-h-[96px]" />
+            <Textarea 
+              id="descricao" 
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              placeholder="Adicione uma descrição" 
+              className="min-h-[96px]" 
+            />
           </div>
 
           {/* Categoria */}
@@ -62,7 +112,7 @@ export default function NovoAnuncioPage() {
           {/* Tipo de transação */}
           <div className="space-y-2">
             <Label className="text-base font-semibold">Tipo de transação</Label>
-            <Select>
+            <Select onValueChange={setTipoTransacao}>
               <SelectTrigger className="h-10 cursor-pointer">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
@@ -78,7 +128,7 @@ export default function NovoAnuncioPage() {
           {/* Estado de conservação */}
           <div className="space-y-2">
             <Label className="text-base font-semibold">Estado de conservação</Label>
-            <Select>
+            <Select onValueChange={setEstadoConservacao}>
               <SelectTrigger className="h-10 cursor-pointer">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
@@ -118,7 +168,9 @@ export default function NovoAnuncioPage() {
                   Upload
                 </Button>
                 {fileName && (
-                  <p className="text-sm text-muted-foreground break-all">Selecionado: {fileName}</p>
+                  <p className="text-sm text-muted-foreground break-all">
+                    Selecionado: {fileName}
+                  </p>
                 )}
               </div>
             </div>
@@ -133,6 +185,10 @@ export default function NovoAnuncioPage() {
               Anunciar
             </Button>
           </div>
+
+          {mensagem && (
+            <p className="mt-4 text-sm text-green-600">{mensagem}</p>
+          )}
         </form>
       </section>
     </div>
