@@ -143,6 +143,7 @@ export default function ProdutoPage({ params }: { params: { id: string } }) {
             Opiniões do produto
             <span className="text-base text-muted-foreground">({reviews.length})</span>
           </h3>
+          {/* Criar uma componente especifica para renderizar as opiniões no back-end */}
           <div className="flex items-center gap-1 text-yellow-500 mt-1">
             {stars.map((_, i) => (
               <Star
@@ -182,6 +183,7 @@ export default function ProdutoPage({ params }: { params: { id: string } }) {
                 </div>
               </div>
             ))}
+            {/* Criar uma componente especifica para renderizar as opiniões no back-end */}
           </div>
         </div>
       </section>
