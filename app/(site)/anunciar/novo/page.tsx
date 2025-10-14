@@ -135,13 +135,12 @@ export default function NovoAnuncioPage() {
               </SelectContent>
             </Select>
 
-            {/* Campo opcional quando escolher "Outros" */}
-            {categoria === "outros" && (
+            {/* {categoria === "outros" && (
               <div className="mt-3 space-y-2">
                 <Label htmlFor="outra-categoria" className="text-sm font-medium">Outra categoria</Label>
                 <Input id="outra-categoria" placeholder="Descreva a categoria" className="h-10" />
               </div>
-            )}
+            )} */}
           </div>
 
           {/* Tipo de transação */}
@@ -172,9 +171,6 @@ export default function NovoAnuncioPage() {
                 onChange={handlePrecoChange}
                 className="h-10"
               />
-              <p className="text-xs text-muted-foreground">
-                Será salvo como {precoCentavos ?? 0} centavos.
-              </p>
             </div>
           )}
 
