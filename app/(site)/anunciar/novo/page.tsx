@@ -19,38 +19,73 @@ export default function NovoAnuncioPage() {
   const [fileName, setFileName] = useState("");
   const [mensagem, setMensagem] = useState("");
 
+  // Exibição (R$ x) e valor salvo (centavos)
+  const [preco, setPreco] = useState<string>("");
+  const [precoCentavos, setPrecoCentavos] = useState<number | null>(null);
+
+  // formata o valor em R$ e guarda centavos para o backend
+  const handlePrecoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, ""); // mantém só números
+    if (!digits) {
+      setPreco("");
+      setPrecoCentavos(null);
+      return;
+    }
+    const valor = Number(digits) / 100; // últimos 2 dígitos são centavos
+    setPrecoCentavos(Math.round(valor * 100));
+    setPreco(
+      new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valor)
+    );
+  };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setMensagem("Enviando...");
+    setMensagem("");
 
-    try{
+    try {
+      if (!titulo.trim()) throw new Error("Título é obrigatório.");
+      if (!tipoTransacao) throw new Error("Selecione o tipo de transação.");
+      if (tipoTransacao === "venda" && (precoCentavos == null || precoCentavos < 0)) {
+        throw new Error("Informe um preço válido.");
+      }
+
       const res = await fetch("/api/items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           titulo,
           descricao,
-          tipo_transacao: tipoTransacao.toUpperCase(),
+          tipo_transacao: tipoTransacao.toUpperCase(),      // backend espera em MAIÚSCULO
           estado_conservacao: estadoConservacao.toUpperCase(),
-          preco: 0,
-          usuario_id: "6398473e-461e-4a07-a76e-111f627ef873", //temp
-          categoria_id: "c0d49de1-54dc-409b-99c2-8f0af6867ae7" //temp
+          preco_formatado: tipoTransacao === "venda" ? preco : null,
+          preco_centavos:  tipoTransacao === "venda" ? precoCentavos : null,
+          // TODO: substitua pelo fluxo real:
+          usuario_id: "6398473e-461e-4a07-a76e-111f627ef873",
+          categoria_id: "c0d49de1-54dc-409b-99c2-8f0af6867ae7",
+          categoria_slug: categoria || null,
         }),
       });
 
-      if (!res.ok) throw new Error("Erro ao criar o anúncio");
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Erro ao criar o anúncio");
+      }
 
       setMensagem("Anúncio criado com sucesso!");
+      // limpa form
       setTitulo("");
       setDescricao("");
       setCategoria("");
       setTipoTransacao("");
       setEstadoConservacao("");
       setFileName("");
-    } catch (error) {
-      setMensagem("Erro ao criar o anúncio.");
-    }
+      setPreco("");
+      setPrecoCentavos(null);
+    } catch (err: any) {
+      setMensagem(err?.message || "Erro ao criar o anúncio.");
+    } 
   }
+
 
   return (
     <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -120,10 +155,28 @@ export default function NovoAnuncioPage() {
                 <SelectItem className="cursor-pointer" value="venda">Venda</SelectItem>
                 <SelectItem className="cursor-pointer" value="emprestimo">Empréstimo</SelectItem>
                 <SelectItem className="cursor-pointer" value="doacao">Doação</SelectItem>
-                <SelectItem className="cursor-pointer" value="aluguel">Aluguel</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {/* Campo de preço se for venda */}
+          {tipoTransacao === "venda" && (
+            <div className="space-y-2">
+              <Label htmlFor="preco" className="text-base font-semibold">Selecione o preço</Label>
+              <Input
+                id="preco"
+                type="text"
+                inputMode="numeric"
+                placeholder="R$ 0,00"
+                value={preco}
+                onChange={handlePrecoChange}
+                className="h-10"
+              />
+              <p className="text-xs text-muted-foreground">
+                Será salvo como {precoCentavos ?? 0} centavos.
+              </p>
+            </div>
+          )}
 
           {/* Estado de conservação */}
           <div className="space-y-2">

@@ -76,7 +76,8 @@ model Item {
   descricao             String?
   tipo_transacao        TipoTransacao
   estado_conservacao    EstadoConservacao
-  preco                 Float?
+  preco_formatado       String?
+  preco_centavos        Int?
   prazo_dias            Int?
   quantidade_disponivel Int      @default(1)
 
