@@ -38,6 +38,7 @@ export async function POST(req: Request) {
       usuario_id,
       categoria_id,
       quantidade_disponivel,
+      imagens: imagensInput,
     } = body;
 
     // validações essenciais
@@ -76,19 +77,42 @@ export async function POST(req: Request) {
       return new NextResponse("Quantidade deve ser um inteiro positivo.", { status: 400 });
     }
 
-    const item = await prisma.item.create({
-      data: {
-        titulo: titulo.trim(),
-        descricao: descricao?.trim() || null,
-        tipo_transacao: tipo_transacao,
-        estado_conservacao: estado_conservacao || null,
-        preco_centavos: tipo_transacao === "VENDA" ? preco_centavos : null,
-        preco_formatado: preco_formatado || null,
-        usuario_id: usuario_id,
-        categoria_id: categoria_id || null,
-        quantidade_disponivel: quantidadeNormalizada,
-      },
-      select: { id: true },
+    const imagensArray = Array.isArray(imagensInput) ? imagensInput : [];
+    const imagens = imagensArray
+      .map((imagem) => (typeof imagem === "string" ? imagem.trim() : ""))
+      .filter((imagem) => imagem.length > 0);
+
+    if (!imagens.length) {
+      return new NextResponse("Pelo menos uma imagem é obrigatória.", {
+        status: 400,
+      });
+    }
+
+    const item = await prisma.$transaction(async (tx) => {
+      const createdItem = await tx.item.create({
+        data: {
+          titulo: titulo.trim(),
+          descricao: descricao?.trim() || null,
+          tipo_transacao: tipo_transacao,
+          estado_conservacao: estado_conservacao || null,
+          preco_centavos: tipo_transacao === "VENDA" ? preco_centavos : null,
+          preco_formatado: preco_formatado || null,
+          usuario_id: usuario_id,
+          categoria_id: categoria_id || null,
+          quantidade_disponivel: quantidadeNormalizada,
+        },
+        select: { id: true },
+      });
+
+      await tx.imagemAnuncio.createMany({
+        data: imagens.map((url, index) => ({
+          anuncio_id: createdItem.id,
+          url,
+          ordem: index,
+        })),
+      });
+
+      return createdItem;
     });
 
     return NextResponse.json(item, { status: 201 });

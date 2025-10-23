@@ -56,6 +56,27 @@ export default function NovoAnuncioPage() {
     );
   };
 
+  const convertFileToBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result === "string") {
+          resolve(result);
+        } else {
+          reject(new Error("Não foi possível processar o arquivo selecionado."));
+        }
+      };
+      reader.onerror = () => {
+        reject(
+          new Error(
+            "Erro ao ler o arquivo selecionado. Por favor, tente novamente."
+          )
+        );
+      };
+      reader.readAsDataURL(file);
+    });
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMensagem("");
@@ -69,6 +90,23 @@ export default function NovoAnuncioPage() {
       const quantidadeNormalizada = Number.parseInt(quantidade, 10);
       if (!Number.isFinite(quantidadeNormalizada) || quantidadeNormalizada < 1) {
         throw new Error("Informe uma quantidade válida.");
+      }
+      if (!selectedFiles.length) {
+        throw new Error("Adicione pelo menos uma foto do anúncio.");
+      }
+
+      const imagensBase64 = await Promise.all(
+        selectedFiles.map(({ file }) => convertFileToBase64(file))
+      );
+
+      const imagens = imagensBase64
+        .map((imagem) => imagem.trim())
+        .filter((imagem) => imagem.length > 0);
+
+      if (!imagens.length) {
+        throw new Error(
+          "Não foi possível processar as fotos selecionadas. Tente novamente."
+        );
       }
 
       const res = await fetch("/api/items", {
@@ -86,6 +124,7 @@ export default function NovoAnuncioPage() {
           usuario_id: "6398473e-461e-4a07-a76e-111f627ef873",
           categoria_id: "c0d49de1-54dc-409b-99c2-8f0af6867ae7",
           categoria_slug: categoria || null,
+          imagens,
         }),
       });
 

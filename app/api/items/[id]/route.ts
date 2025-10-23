@@ -10,6 +10,9 @@ export async function GET(
       where: { id: params.id },
       include: {
         categoria: true,
+        imagens: {
+          orderBy: { ordem: "asc" },
+        },
         usuario: {
           select: { id: true, nome: true, email_institucional: true },
         },
