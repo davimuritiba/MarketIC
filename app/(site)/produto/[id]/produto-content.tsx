@@ -2,14 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import {
-  Star,
-  ShoppingBag,
-  RefreshCw,
-  Heart,
-  Gift,
-  Repeat2,
-} from "lucide-react";
+import { Star, ShoppingBag, Heart, Gift, Repeat2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -98,28 +91,20 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
   const images = product.images;
   const hasImages = images.length > 0;
 
-  const safeIndex =
-    hasImages && currentImageIndex >= 0 && currentImageIndex < images.length
-      ? currentImageIndex
-      : 0;
+  const safeIndex = hasImages && currentImageIndex >= 0 && currentImageIndex < images.length ? currentImageIndex : 0;
   const mainImage = hasImages ? images[safeIndex] : null;
 
-  const typeConfig =
-    transactionTypeConfig[product.transactionType] ?? {
+  const typeConfig = transactionTypeConfig[product.transactionType] ?? {
       label: product.transactionType,
       icon: ShoppingBag as LucideIcon,
       colorClass: "text-gray-500",
     };
   const TypeIcon = typeConfig.icon;
-  const conditionLabel =
-    conditionLabels[product.condition] ?? product.condition;
+  const conditionLabel = conditionLabels[product.condition] ?? product.condition;
 
-  const avgRating =
-    reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length;
+  const avgRating = reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length;
 
-  const description = product.description?.trim()
-    ? product.description
-    : "Descrição não disponível.";
+  const description = product.description?.trim() ? product.description : "Descrição não disponível.";
 
   return (
     <div className="space-y-8">
@@ -143,7 +128,7 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
                   key={image.id ?? `${image.url}-${index}`}
                   type="button"
                   onClick={() => setCurrentImageIndex(index)}
-                  className={`rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                  className={`rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer ${
                     index === safeIndex
                       ? "ring-2 ring-blue-500"
                       : "ring-1 ring-transparent"
