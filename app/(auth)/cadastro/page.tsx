@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -13,6 +13,63 @@ const DEFAULT_COURSES = [
   { value: "cc", label: "Ciência da Computação" },
   { value: "ec", label: "Engenharia da Computação" },
 ];
+
+const sanitizeCpf = (value: string) => value.replace(/\D/g, "");
+
+const isValidCpf = (value: string) => {
+  const cpf = sanitizeCpf(value);
+
+  if (cpf.length !== 11 || /^([0-9])\1{10}$/.test(cpf)) {
+    return false;
+  }
+
+  const digits = cpf.split("").map((digit) => Number.parseInt(digit, 10));
+
+  let sum = 0;
+  for (let i = 0; i < 9; i += 1) {
+    sum += digits[i] * (10 - i);
+  }
+  let firstVerifier = (sum * 10) % 11;
+  if (firstVerifier === 10) {
+    firstVerifier = 0;
+  }
+  if (digits[9] !== firstVerifier) {
+    return false;
+  }
+
+  sum = 0;
+  for (let i = 0; i < 10; i += 1) {
+    sum += digits[i] * (11 - i);
+  }
+  let secondVerifier = (sum * 10) % 11;
+  if (secondVerifier === 10) {
+    secondVerifier = 0;
+  }
+
+  return digits[10] === secondVerifier;
+};
+
+const formatCpf = (value: string) => {
+  const digits = sanitizeCpf(value);
+
+  const part1 = digits.slice(0, 3);
+  const part2 = digits.slice(3, 6);
+  const part3 = digits.slice(6, 9);
+  const part4 = digits.slice(9, 11);
+
+  let formatted = part1;
+  if (part2) {
+    formatted += `.${part2}`;
+  }
+  if (part3) {
+    formatted += `.${part3}`;
+  }
+  if (part4) {
+    formatted += `-${part4}`;
+  }
+
+  return formatted;
+};
 
 export default function CadastroPage() {
   const router = useRouter();
@@ -45,6 +102,13 @@ export default function CadastroPage() {
     }
 
     try {
+      const sanitizedCpf = sanitizeCpf(cpf);
+      if (!isValidCpf(sanitizedCpf)) {
+        setErrorMessage("Informe um CPF válido.");
+        setIsSubmitting(false);
+        return;
+      }
+
       console.log("📤 Enviando dados para /api/register...");
       console.log({
         nome,
@@ -65,7 +129,7 @@ export default function CadastroPage() {
           nome,
           emailInstitucional,
           senha,
-          cpf,
+          cpf: sanitizedCpf,
           rg,
           telefone,
           dataNascimento,
@@ -93,6 +157,10 @@ export default function CadastroPage() {
       setIsSubmitting(false);
     }
   }
+
+  const handleCpfChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setCpf(formatCpf(event.target.value));
+  };
 
   return (
     <div className="min-h-screen grid place-items-center bg-neutral-100 px-4">
@@ -163,7 +231,8 @@ export default function CadastroPage() {
                   placeholder="000.000.000-00"
                   className="h-10 bg-neutral-100"
                   value={cpf}
-                  onChange={(event) => setCpf(event.target.value)}
+                  onChange={handleCpfChange}
+                  maxLength={14}
                   required
                 />
               </div>

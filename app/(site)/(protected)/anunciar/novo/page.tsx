@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,14 +10,31 @@ import { ImageIcon } from "lucide-react";
 
 export default function NovoAnuncioPage() {
   const fileRef = useRef<HTMLInputElement | null>(null);
-  
+
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
   const [categoria, setCategoria] = useState("");
   const [tipoTransacao, setTipoTransacao] = useState("");
   const [estadoConservacao, setEstadoConservacao] = useState("");
-  const [fileName, setFileName] = useState("");
+  type PreviewFile = {
+    file: File;
+    preview: string;
+  };
+
+  const [selectedFiles, setSelectedFiles] = useState<PreviewFile[]>([]);
   const [mensagem, setMensagem] = useState("");
+
+  const previewsRef = useRef<PreviewFile[]>([]);
+
+  useEffect(() => {
+    previewsRef.current = selectedFiles;
+  }, [selectedFiles]);
+
+  useEffect(() => {
+    return () => {
+      previewsRef.current.forEach((file) => URL.revokeObjectURL(file.preview));
+    };
+  }, []);
 
   // Exibição (R$ x) e valor salvo (centavos)
   const [preco, setPreco] = useState<string>("");
@@ -78,7 +95,13 @@ export default function NovoAnuncioPage() {
       setCategoria("");
       setTipoTransacao("");
       setEstadoConservacao("");
-      setFileName("");
+      setSelectedFiles((prev) => {
+        prev.forEach((file) => URL.revokeObjectURL(file.preview));
+        return [];
+      });
+      if (fileRef.current) {
+        fileRef.current.value = "";
+      }
       setPreco("");
       setPrecoCentavos(null);
     } catch (err: any) {
@@ -86,6 +109,38 @@ export default function NovoAnuncioPage() {
     } 
   }
 
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    if (!files.length) {
+      return;
+    }
+    const filesWithPreview = files.map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+    setSelectedFiles((prev) => [...prev, ...filesWithPreview]);
+    if (fileRef.current) {
+      fileRef.current.value = "";
+    }
+  };
+
+  const handleRemoveFile = (indexToRemove: number) => {
+    setSelectedFiles((prev) => {
+      const fileToRemove = prev[indexToRemove];
+      if (fileToRemove) {
+        URL.revokeObjectURL(fileToRemove.preview);
+      }
+      return prev.filter((_, index) => index !== indexToRemove);
+    });
+  };
+
+  const handlePreviewClick = (previewUrl: string) => {
+    const newWindow = window.open(previewUrl, "_blank", "noopener,noreferrer");
+    if (newWindow) {
+      newWindow.opener = null;
+    }
+  };
 
   return (
     <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -194,20 +249,15 @@ export default function NovoAnuncioPage() {
             <Label className="text-base font-semibold">Adicione uma foto</Label>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
-              <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-md border bg-neutral-100 grid place-items-center text-neutral-400">
-                <ImageIcon className="w-12 h-12 sm:w-16 sm:h-16" />
-              </div>
 
               <div className="space-y-2">
                 <input
                   ref={fileRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    setFileName(f ? f.name : "");
-                  }}
+                  onChange={handleFileChange}
                 />
                 <Button
                   type="button"
@@ -216,10 +266,41 @@ export default function NovoAnuncioPage() {
                 >
                   Upload
                 </Button>
-                {fileName && (
-                  <p className="text-sm text-muted-foreground break-all">
-                    Selecionado: {fileName}
-                  </p>
+                {selectedFiles.length > 0 && (
+                  <div className="space-y-2 w-full">
+                    <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {selectedFiles.map(({ file, preview }, index) => (
+                        <li key={`${preview}-${index}`} className="space-y-2">
+                          <button
+                            type="button"
+                            onClick={() => handlePreviewClick(preview)}
+                            className="group relative block w-full overflow-hidden rounded-md border aspect-square focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1500FF]"
+                          >
+                            <img
+                              src={preview}
+                              alt={`Pré-visualização da imagem ${index + 1}`}
+                              className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                            />
+                            <span className="sr-only">Abrir imagem completa</span>
+                          </button>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span className="flex-1 truncate" title={file.name}>
+                              {file.name}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="h-8 px-2 text-xs cursor-pointer"
+                              onClick={() => handleRemoveFile(index)}
+                            >
+                              Remover
+                            </Button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-xs text-muted-foreground">Clique na imagem para abrir em tamanho completo.</p>
+                  </div>
                 )}
               </div>
             </div>

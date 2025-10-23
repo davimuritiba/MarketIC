@@ -3,6 +3,43 @@ import { NextResponse } from "next/server";
 import { attachSessionCookie, createSession, hashPassword } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+function sanitizeCPF(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function isValidCPF(value: string) {
+  const cpf = sanitizeCPF(value);
+
+  if (cpf.length !== 11 || /^([0-9])\1{10}$/.test(cpf)) {
+    return false;
+  }
+
+  const digits = cpf.split("").map((digit) => Number.parseInt(digit, 10));
+
+  let sum = 0;
+  for (let i = 0; i < 9; i += 1) {
+    sum += digits[i] * (10 - i);
+  }
+  let firstVerifier = (sum * 10) % 11;
+  if (firstVerifier === 10) {
+    firstVerifier = 0;
+  }
+  if (digits[9] !== firstVerifier) {
+    return false;
+  }
+
+  sum = 0;
+  for (let i = 0; i < 10; i += 1) {
+    sum += digits[i] * (11 - i);
+  }
+  let secondVerifier = (sum * 10) % 11;
+  if (secondVerifier === 10) {
+    secondVerifier = 0;
+  }
+
+  return digits[10] === secondVerifier;
+}
+
 const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@ic\.ufal\.br$/;
 
 export async function POST(request: Request) {
@@ -56,6 +93,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "CPF é obrigatório." }, { status: 400 });
   }
 
+  const normalizedCpf = sanitizeCPF(cpf);
+  if (!isValidCPF(normalizedCpf)) {
+    return NextResponse.json({ error: "CPF inválido." }, { status: 400 });
+  }
+
   if (!rg || !rg.trim()) {
     return NextResponse.json({ error: "RG é obrigatório." }, { status: 400 });
   }
@@ -84,6 +126,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Email já cadastrado." }, { status: 409 });
   }
 
+  const existingCpf = await prisma.usuario.findUnique({
+    where: { CPF: normalizedCpf },
+  });
+  if (existingCpf) {
+    return NextResponse.json({ error: "CPF já cadastrado." }, { status: 409 });
+  }
+
   const passwordHash = await hashPassword(senha);
 
   const user = await prisma.usuario.create({
@@ -91,7 +140,7 @@ export async function POST(request: Request) {
       nome: nome.trim(),
       email_institucional: emailNormalizado,
       senha: passwordHash,
-      CPF: cpf.trim(),
+      CPF: normalizedCpf,
       RG: rg.trim(),
       telefone: telefone.trim(),
       data_nascimento: new Date(dataNascimento),
