@@ -16,6 +16,7 @@ export default function NovoAnuncioPage() {
   const [categoria, setCategoria] = useState("");
   const [tipoTransacao, setTipoTransacao] = useState("");
   const [estadoConservacao, setEstadoConservacao] = useState("");
+  const [quantidade, setQuantidade] = useState("1");
   type PreviewFile = {
     file: File;
     preview: string;
@@ -65,6 +66,10 @@ export default function NovoAnuncioPage() {
       if (tipoTransacao === "venda" && (precoCentavos == null || precoCentavos < 0)) {
         throw new Error("Informe um preço válido.");
       }
+      const quantidadeNormalizada = Number.parseInt(quantidade, 10);
+      if (!Number.isFinite(quantidadeNormalizada) || quantidadeNormalizada < 1) {
+        throw new Error("Informe uma quantidade válida.");
+      }
 
       const res = await fetch("/api/items", {
         method: "POST",
@@ -76,6 +81,7 @@ export default function NovoAnuncioPage() {
           estado_conservacao: estadoConservacao.toUpperCase(),
           preco_formatado: tipoTransacao === "venda" ? preco : null,
           preco_centavos:  tipoTransacao === "venda" ? precoCentavos : null,
+          quantidade_disponivel: quantidadeNormalizada,
           // TODO: substitua pelo fluxo real:
           usuario_id: "6398473e-461e-4a07-a76e-111f627ef873",
           categoria_id: "c0d49de1-54dc-409b-99c2-8f0af6867ae7",
@@ -95,6 +101,7 @@ export default function NovoAnuncioPage() {
       setCategoria("");
       setTipoTransacao("");
       setEstadoConservacao("");
+      setQuantidade("1");
       setSelectedFiles((prev) => {
         prev.forEach((file) => URL.revokeObjectURL(file.preview));
         return [];
@@ -242,6 +249,23 @@ export default function NovoAnuncioPage() {
                 <SelectItem className="cursor-pointer" value="usado">Usado</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Quantidade disponível */}
+          <div className="space-y-2">
+            <Label htmlFor="quantidade" className="text-base font-semibold">
+              Quantidade disponível
+            </Label>
+            <Input
+              id="quantidade"
+              type="number"
+              min={1}
+              step={1}
+              value={quantidade}
+              onChange={(event) => setQuantidade(event.target.value)}
+              placeholder="1"
+              className="h-10 inline-block w-30"
+            />
           </div>
 
           {/* Upload de foto */}
