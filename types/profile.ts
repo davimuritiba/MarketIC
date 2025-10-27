@@ -2,7 +2,19 @@ export type TransactionLabel = "Venda" | "Empréstimo" | "Doação" | "Troca"
 
 export type ConditionLabel = "Novo" | "Seminovo" | "Usado"
 
-import type { AdItem } from "@/types/ad"
+export interface AdItem {
+  id: string
+  href: string
+  title: string
+  type: "Venda" | "Empréstimo" | "Doação" | "Troca"
+  price?: string
+  days?: number
+  condition?: "Novo" | "Seminovo" | "Usado"
+  rating?: number
+  reviews?: number
+  image?: string
+}
+
 
 export interface ProfileAdItem extends AdItem {}
 

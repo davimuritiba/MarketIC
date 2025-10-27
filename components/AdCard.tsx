@@ -5,7 +5,18 @@ import Link from "next/link"
 import { type ElementType, useState } from "react"
 import { Gift, Repeat2, ShoppingBag, ChevronLeft, ChevronRight, Star, } from "lucide-react"
 
-import type { AdItem } from "@/types/ad"
+export interface AdItem {
+  id: string
+  href: string
+  title: string
+  type: "Venda" | "Empréstimo" | "Doação" | "Troca"
+  price?: string
+  days?: number
+  condition?: "Novo" | "Seminovo" | "Usado"
+  rating?: number
+  reviews?: number
+  image?: string
+}
 
 const typeConfig: Record<AdItem["type"], { icon: ElementType; color: string }> = {
   Venda: { icon: ShoppingBag, color: "#EC221F" },
