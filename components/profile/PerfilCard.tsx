@@ -1,34 +1,15 @@
 // components/profile/ProfileCard.tsx
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent,} from "react";
 import { useRouter } from "next/navigation";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle, } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import { Calendar, GraduationCap, IdCard, Mail, Phone, Star } from "lucide-react";
 
 import { resolveCourseLabel } from "@/lib/course-labels";
@@ -46,6 +27,11 @@ type FormState = {
   dataNascimento: string;
   rg: string;
   fotoDocumentoUrl: string;
+};
+
+type PreviewFile = {
+  file: File;
+  preview: string;
 };
 
 function toFormState(user: ProfileUserData): FormState {
@@ -67,6 +53,7 @@ function formatDate(value: string | null) {
   if (Number.isNaN(date.getTime())) {
     return "Data de nascimento não informada";
   }
+  date.setDate(date.getDate() + 1);
   return date.toLocaleDateString("pt-BR");
 }
 
@@ -122,6 +109,8 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [fotoDocumento, setFotoDocumento] = useState<PreviewFile | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const router = useRouter();
 
   const { courseOptions, courseLabelMap } = useMemo(() => {
@@ -142,6 +131,88 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
     return { courseOptions: options, courseLabelMap: map };
   }, [courses, currentUser.curso]);
 
+  useEffect(() => {
+    return () => {
+      if (fotoDocumento) {
+        URL.revokeObjectURL(fotoDocumento.preview);
+      }
+    };
+  }, [fotoDocumento]);
+
+  const convertFileToBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result === "string") {
+          resolve(result);
+        } else {
+          reject(new Error("Não foi possível processar o arquivo selecionado."));
+        }
+      };
+      reader.onerror = () => {
+        reject(
+          new Error(
+            "Erro ao ler o arquivo selecionado. Por favor, tente novamente.",
+          ),
+        );
+      };
+      reader.readAsDataURL(file);
+    });
+
+  const handleFotoDocumentoChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      setErrorMessage("A imagem deve ter no máximo 5MB.");
+      return;
+    }
+
+    setErrorMessage(null);
+
+    setFotoDocumento((prev) => {
+      if (prev) {
+        URL.revokeObjectURL(prev.preview);
+      }
+
+      return {
+        file,
+        preview: URL.createObjectURL(file),
+      };
+    });
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveFotoDocumento = () => {
+    setFotoDocumento((prev) => {
+      if (prev) {
+        URL.revokeObjectURL(prev.preview);
+      }
+
+      return null;
+    });
+
+    setFormState((prev) => ({
+      ...prev,
+      fotoDocumentoUrl: "",
+    }));
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSaving(true);
@@ -160,6 +231,16 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
         throw new Error("Informe seu RG.");
       }
 
+      let fotoDocumentoUrlToSend: string | null = null;
+
+      if (fotoDocumento) {
+        fotoDocumentoUrlToSend = await convertFileToBase64(fotoDocumento.file);
+      } else {
+        fotoDocumentoUrlToSend = formState.fotoDocumentoUrl.trim()
+          ? formState.fotoDocumentoUrl.trim()
+          : null;
+      }
+
       const response = await fetch("/api/profile", {
         method: "PUT",
         headers: {
@@ -170,7 +251,7 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
           telefone: formState.telefone.trim() || null,
           curso: formState.curso.trim() || null,
           rg: formState.rg.trim(),
-          fotoDocumentoUrl: formState.fotoDocumentoUrl.trim() || null,
+          fotoDocumentoUrl: fotoDocumentoUrlToSend,
           dataNascimento: new Date(formState.dataNascimento).toISOString(),
         }),
       });
@@ -188,6 +269,12 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
         rg: data.user.rg,
       });
       setFormState(toFormState(data.user));
+      setFotoDocumento((prev) => {
+        if (prev) {
+          URL.revokeObjectURL(prev.preview);
+        }
+        return null;
+      });
       setOpen(false);
     } catch (error) {
       if (error instanceof Error) {
@@ -205,6 +292,15 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
     if (!value) {
       setFormState(toFormState(currentUser));
       setErrorMessage(null);
+      setFotoDocumento((prev) => {
+        if (prev) {
+          URL.revokeObjectURL(prev.preview);
+        }
+        return null;
+      });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -394,25 +490,59 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="foto" className="text-sm font-semibold">
-                  Foto de perfil (URL)
+                <label
+                  className="text-sm font-semibold"
+                  htmlFor="fotoDocumento"
+                >
+                  Foto do documento
                 </label>
-                <Input
-                  id="foto"
-                  type="url"
-                  value={formState.fotoDocumentoUrl}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      fotoDocumentoUrl: event.target.value,
-                    }))
-                  }
-                  placeholder="https://exemplo.com/minha-foto.jpg"
-                  className="h-10 bg-neutral-100"
-                />
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                  <input
+                    ref={fileInputRef}
+                    id="fotoDocumento"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFotoDocumentoChange}
+                  />
+
+                  <Button
+                    type="button"
+                    className="w-full sm:w-auto cursor-pointer bg-[#1500FF] hover:bg-[#1200d6]"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Selecionar foto
+                  </Button>
+
+                  {fotoDocumento || formState.fotoDocumentoUrl ? (
+                    <div className="flex items-center gap-3">
+                      <div className="h-20 w-20 overflow-hidden rounded-full border border-neutral-200 bg-neutral-100">
+                        <img
+                          src={
+                            fotoDocumento
+                              ? fotoDocumento.preview
+                              : formState.fotoDocumentoUrl
+                          }
+                          alt="Pré-visualização do documento"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="cursor-pointer px-3"
+                        onClick={handleRemoveFotoDocumento}
+                      >
+                        Remover
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+
                 <p className="text-xs text-muted-foreground">
-                  Utilize um link público para a imagem que deseja usar como foto de
-                  perfil.
+                  Formatos suportados: JPG, PNG ou WEBP. Tamanho máximo de 5MB.
                 </p>
               </div>
 
