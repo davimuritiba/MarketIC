@@ -44,12 +44,14 @@ export async function PUT(request: NextRequest) {
     telefone,
     curso,
     fotoDocumentoUrl,
+    rg,
     dataNascimento,
   } = body as {
     nome?: string | null;
     telefone?: string | null;
     curso?: string | null;
     fotoDocumentoUrl?: string | null;
+    rg?: string | null;
     dataNascimento?: string | null;
   };
 
@@ -81,6 +83,13 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Foto do documento não pode ser vazia." }, { status: 400 });
     }
     dataToUpdate.foto_documento_url = fotoDocumentoUrl?.trim() ?? null;
+  }
+
+  if (rg !== undefined) {
+    if (rg === null || !rg.trim()) {
+      return NextResponse.json({ error: "RG não pode ser vazio." }, { status: 400 });
+    }
+    dataToUpdate.RG = rg.trim();
   }
 
   if (dataNascimento !== undefined) {
@@ -122,7 +131,7 @@ export async function PUT(request: NextRequest) {
       emailInstitucional: updatedUser.email_institucional,
       telefone: updatedUser.telefone,
       curso: updatedUser.curso,
-      dataNascimento: updatedUser.data_nascimento.toISOString(),
+      dataNascimento: updatedUser.data_nascimento ? updatedUser.data_nascimento.toISOString() : null,
       fotoDocumentoUrl: updatedUser.foto_documento_url,
       reputacaoMedia: updatedUser.reputacao_media,
       reputacaoCount: updatedUser.reputacao_count ?? 0,

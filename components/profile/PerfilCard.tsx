@@ -5,10 +5,29 @@ import { useMemo, useState, type FormEvent } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, } from "@/components/ui/dialog";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Calendar, GraduationCap, IdCard, Mail, Phone, Star } from "lucide-react";
 
 import { resolveCourseLabel } from "@/lib/course-labels";
@@ -24,6 +43,8 @@ type FormState = {
   telefone: string;
   curso: string;
   dataNascimento: string;
+  rg: string;
+  fotoDocumentoUrl: string;
 };
 
 function toFormState(user: ProfileUserData): FormState {
@@ -34,6 +55,8 @@ function toFormState(user: ProfileUserData): FormState {
     dataNascimento: user.dataNascimento
       ? user.dataNascimento.slice(0, 10)
       : "",
+    rg: user.rg ?? "",
+    fotoDocumentoUrl: user.fotoDocumentoUrl ?? "",
   };
 }
 
@@ -52,6 +75,13 @@ function formatCpf(cpf: string) {
   return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 }
 
+function formatRg(rg: string | null) {
+  if (!rg) return "RG não informado";
+  const digits = rg.replace(/\D/g, "");
+  if (digits.length < 8) return rg;
+  return digits.replace(/(\d{2})(\d{3})(\d{3})([\dXx]{1,2})/, "$1.$2.$3-$4");
+}
+
 function formatPhone(phone: string | null) {
   if (!phone) return "Telefone não informado";
   const digits = phone.replace(/\D/g, "");
@@ -59,6 +89,22 @@ function formatPhone(phone: string | null) {
   const match = digits.match(/(\d{2})(\d{4,5})(\d{4})/);
   if (!match) return phone;
   return `(${match[1]}) ${match[2]}-${match[3]}`;
+}
+
+function getInitials(name?: string | null) {
+  if (!name) return "US";
+  const parts = name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase());
+
+  const initials = parts.join("");
+  if (initials) {
+    return initials;
+  }
+
+  return name.charAt(0).toUpperCase();
 }
 
 type ProfileCardProps = {
@@ -105,6 +151,10 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
         throw new Error("Informe sua data de nascimento.");
       }
 
+      if (!formState.rg.trim()) {
+        throw new Error("Informe seu RG.");
+      }
+
       const response = await fetch("/api/profile", {
         method: "PUT",
         headers: {
@@ -114,6 +164,8 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
           nome: formState.nome.trim(),
           telefone: formState.telefone.trim() || null,
           curso: formState.curso.trim() || null,
+          rg: formState.rg.trim(),
+          fotoDocumentoUrl: formState.fotoDocumentoUrl.trim() || null,
           dataNascimento: new Date(formState.dataNascimento).toISOString(),
         }),
       });
@@ -127,6 +179,8 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
       setCurrentUser({
         ...data.user,
         dataNascimento: data.user.dataNascimento,
+        fotoDocumentoUrl: data.user.fotoDocumentoUrl,
+        rg: data.user.rg,
       });
       setFormState(toFormState(data.user));
       setOpen(false);
@@ -155,10 +209,14 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
   return (
     <Card className="w-full">
       <CardHeader className="flex flex-col items-center space-y-4">
-        <Avatar className="h-30 w-30">
-          <AvatarImage src="/images/user.jpg" alt={currentUser.nome} />
-          <AvatarFallback>
-            {currentUser.nome ? currentUser.nome.charAt(0).toUpperCase() : "US"}
+        <Avatar className="h-32 w-32 border-2 border-neutral-200 shadow-sm">
+          <AvatarImage
+            src={currentUser.fotoDocumentoUrl ?? undefined}
+            alt={currentUser.nome}
+            className="object-cover"
+          />
+          <AvatarFallback className="text-2xl font-semibold uppercase bg-neutral-100 text-neutral-500">
+            {getInitials(currentUser.nome)}
           </AvatarFallback>
         </Avatar>
         <CardTitle className="text-lg">{currentUser.nome}</CardTitle>
@@ -273,6 +331,24 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
               </div>
 
               <div className="space-y-2">
+                <label htmlFor="rg" className="text-sm font-semibold">
+                  RG
+                </label>
+                <Input
+                  id="rg"
+                  value={formState.rg}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      rg: event.target.value,
+                    }))
+                  }
+                  placeholder="00.000.000-0"
+                  className="h-10 bg-neutral-100"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <label htmlFor="cpf" className="text-sm font-semibold">
                   CPF
                 </label>
@@ -282,6 +358,29 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
                   disabled
                   className="h-10 bg-neutral-100"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="foto" className="text-sm font-semibold">
+                  Foto de perfil (URL)
+                </label>
+                <Input
+                  id="foto"
+                  type="url"
+                  value={formState.fotoDocumentoUrl}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      fotoDocumentoUrl: event.target.value,
+                    }))
+                  }
+                  placeholder="https://exemplo.com/minha-foto.jpg"
+                  className="h-10 bg-neutral-100"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Utilize um link público para a imagem que deseja usar como foto de
+                  perfil.
+                </p>
               </div>
 
               {errorMessage && (
@@ -325,6 +424,9 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
             </li>
             <li className="text-base flex items-center gap-2">
               <IdCard size={20} /> CPF: {formatCpf(currentUser.cpf)}
+            </li>
+            <li className="text-base flex items-center gap-2">
+              <IdCard size={20} /> RG: {formatRg(currentUser.rg)}
             </li>
             {currentUser.curso && (
               <li className="text-base flex items-center gap-2">
