@@ -2,6 +2,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -118,6 +119,10 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
   const [open, setOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const router = useRouter();
 
   const { courseOptions, courseLabelMap } = useMemo(() => {
     const map = new Map<string, string>();
@@ -200,6 +205,34 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
     if (!value) {
       setFormState(toFormState(currentUser));
       setErrorMessage(null);
+    }
+  };
+
+  const handleDeleteProfile = async () => {
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const response = await fetch("/api/profile", {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error ?? "Não foi possível excluir o perfil.");
+      }
+
+      setDeleteOpen(false);
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      if (error instanceof Error) {
+        setDeleteError(error.message);
+      } else {
+        setDeleteError("Erro inesperado ao excluir o perfil.");
+      }
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -409,9 +442,9 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
         </Dialog>
       </CardHeader>
 
-      <CardContent className="space-y-40">
-        <div>
-          <h3 className="text-xl font-semibold mb-2">Informações do usuário</h3>
+      <CardContent className="space-y-35">
+        <div className="space-y-2">
+          <h3 className="text-xl font-semibold">Informações do usuário</h3>
           <ul className="space-y-1 text-sm text-muted-foreground">
             <li className="text-base flex items-center gap-2">
               <Mail size={20} /> {currentUser.emailInstitucional}
@@ -438,33 +471,82 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
           </ul>
         </div>
 
-        <div>
-          <h3 className="text-xl font-semibold mb-2">Classificação do usuário</h3>
-          {ratingCount > 0 ? (
-            <>
-              <div className="flex items-center gap-2">
-                <div className="flex text-yellow-500">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <Star
-                      key={index}
-                      size={22}
-                      className={index < Math.round(rating) ? "fill-current" : ""}
-                    />
-                  ))}
+        <div className="space-y-4">
+          <Dialog
+            open={deleteOpen}
+            onOpenChange={(value) => {
+              setDeleteOpen(value);
+              if (!value) {
+                setDeleteError(null);
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button className="cursor-pointer w-full bg-red-600 text-white hover:bg-red-700">
+                Excluir perfil
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[440px]">
+              <DialogHeader>
+                <DialogTitle>Excluir perfil</DialogTitle>
+                <DialogDescription>
+                  Tem certeza que deseja excluir seu perfil? Todos os seus anúncios
+                  previamentes postados serão excluídos, assim como seus anúncios
+                  ativos.
+                </DialogDescription>
+              </DialogHeader>
+              {deleteError && (
+                <p className="text-sm text-red-600">{deleteError}</p>
+              )}
+              <DialogFooter className="mt-2">
+                <Button
+                  type="button"
+                  className="cursor-pointer bg-red-500 hover:bg-red-600 text-white"
+                  onClick={() => setDeleteOpen(false)}
+                  disabled={isDeleting}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  className="cursor-pointer bg-neutral-300 text-neutral-800 hover:bg-neutral-400"
+                  onClick={handleDeleteProfile}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? "Excluindo..." : "Excluir"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <div className="space-y-2">
+            <h3 className="text-xl font-semibold">Classificação do usuário</h3>
+            {ratingCount > 0 ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <div className="flex text-yellow-500">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <Star
+                        key={index}
+                        size={22}
+                        className={index < Math.round(rating) ? "fill-current" : ""}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {rating.toFixed(1)} de 5
+                  </span>
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  {rating.toFixed(1)} de 5
-                </span>
-              </div>
+                <p className="text-sm text-muted-foreground">
+                  {ratingCount} avaliação{ratingCount > 1 ? "es" : ""}
+                </p>
+              </>
+            ) : (
               <p className="text-sm text-muted-foreground">
-                {ratingCount} avaliação{ratingCount > 1 ? "es" : ""}
+                Você ainda não possui nenhuma avaliação.
               </p>
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Você ainda não possui nenhuma avaliação.
-            </p>
-          )}
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getUserFromRequest } from "@/lib/auth";
+import { clearSessionCookie, getUserFromRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getProfilePageData } from "@/lib/profile";
 
@@ -131,7 +131,9 @@ export async function PUT(request: NextRequest) {
       emailInstitucional: updatedUser.email_institucional,
       telefone: updatedUser.telefone,
       curso: updatedUser.curso,
-      dataNascimento: updatedUser.data_nascimento ? updatedUser.data_nascimento.toISOString() : null,
+      dataNascimento: updatedUser.data_nascimento
+        ? updatedUser.data_nascimento.toISOString()
+        : null,
       fotoDocumentoUrl: updatedUser.foto_documento_url,
       reputacaoMedia: updatedUser.reputacao_media,
       reputacaoCount: updatedUser.reputacao_count ?? 0,
@@ -139,4 +141,70 @@ export async function PUT(request: NextRequest) {
       rg: updatedUser.RG,
     },
   });
+}
+
+export async function DELETE(request: NextRequest) {
+  const user = await getUserFromRequest(request);
+
+  if (!user) {
+    return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const userId = user.id;
+
+      const items = await tx.item.findMany({
+        where: { usuario_id: userId },
+        select: { id: true },
+      });
+
+      const itemIds = items.map((item) => item.id);
+
+      if (itemIds.length > 0) {
+        await tx.imagemAnuncio.deleteMany({
+          where: { anuncio_id: { in: itemIds } },
+        });
+
+        await tx.avaliacaoItem.deleteMany({
+          where: { anuncio_id: { in: itemIds } },
+        });
+
+        await tx.interesse.deleteMany({
+          where: { anuncio_id: { in: itemIds } },
+        });
+
+        await tx.favorito.deleteMany({
+          where: { anuncio_id: { in: itemIds } },
+        });
+
+        await tx.carrinhoItem.deleteMany({
+          where: { anuncio_id: { in: itemIds } },
+        });
+      }
+
+      await tx.carrinhoItem.deleteMany({ where: { usuario_id: userId } });
+      await tx.favorito.deleteMany({ where: { usuario_id: userId } });
+      await tx.interesse.deleteMany({ where: { usuario_id: userId } });
+      await tx.avaliacaoItem.deleteMany({
+        where: {
+          OR: [{ usuario_id: userId }, { criado_por: userId }],
+        },
+      });
+
+      await tx.item.deleteMany({ where: { usuario_id: userId } });
+      await tx.session.deleteMany({ where: { usuario_id: userId } });
+      await tx.usuario.delete({ where: { id: userId } });
+    });
+
+    const response = NextResponse.json({ message: "Perfil excluído com sucesso." });
+    clearSessionCookie(response);
+    return response;
+  } catch (error) {
+    console.error("Erro ao excluir perfil:", error);
+    return NextResponse.json(
+      { error: "Não foi possível excluir o perfil." },
+      { status: 500 },
+    );
+  }
 }
