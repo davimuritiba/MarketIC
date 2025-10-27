@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { buildCourseOptionsFromCodes } from "@/lib/course"
 
 import type {
   ConditionLabel,
@@ -22,7 +23,6 @@ const CONDITION_LABEL: Record<string, ConditionLabel> = {
 }
 
 const MAX_ACTIVE_AND_ACQUIRED = 12
-const MAX_HISTORY = 15
 
 function formatPrice(precoCentavos?: number | null, precoFormatado?: string | null) {
   if (precoFormatado && precoFormatado.trim()) {
@@ -56,10 +56,7 @@ function mapItemToAd(item: any): ProfileAdItem {
     href: `/produto/${item.id}`,
     title: item.titulo,
     type,
-    price:
-      type === "Venda"
-        ? formatPrice(item.preco_centavos, item.preco_formatado)
-        : undefined,
+    price: type === "Venda" ? formatPrice(item.preco_centavos, item.preco_formatado) : undefined,
     days: type === "Empréstimo" ? item.prazo_dias ?? undefined : undefined,
     condition,
     rating: averageRating,
@@ -69,7 +66,7 @@ function mapItemToAd(item: any): ProfileAdItem {
 }
 
 export async function getProfilePageData(userId: string): Promise<ProfilePageData> {
-  const [usuario, activeAds, historyAds, acquiredInterests] = await prisma.$transaction([
+  const [usuario, allAds, acquiredInterests, courseRecords] = await prisma.$transaction([
     prisma.usuario.findUnique({
       where: { id: userId },
       select: {
@@ -89,7 +86,6 @@ export async function getProfilePageData(userId: string): Promise<ProfilePageDat
     prisma.item.findMany({
       where: {
         usuario_id: userId,
-        quantidade_disponivel: { gt: 0 },
       },
       include: {
         imagens: {
@@ -100,25 +96,7 @@ export async function getProfilePageData(userId: string): Promise<ProfilePageDat
           select: { nota: true },
         },
       },
-      take: MAX_ACTIVE_AND_ACQUIRED,
-      orderBy: { titulo: "asc" },
-    }),
-    prisma.item.findMany({
-      where: {
-        usuario_id: userId,
-        quantidade_disponivel: 0,
-      },
-      include: {
-        imagens: {
-          orderBy: { ordem: "asc" },
-          take: 1,
-        },
-        avaliacoes: {
-          select: { nota: true },
-        },
-      },
-      take: MAX_HISTORY,
-      orderBy: { titulo: "asc" },
+      orderBy: [{ created_at: "desc" }, { titulo: "asc" }],
     }),
     prisma.interesse.findMany({
       where: {
@@ -141,6 +119,10 @@ export async function getProfilePageData(userId: string): Promise<ProfilePageDat
       take: MAX_ACTIVE_AND_ACQUIRED,
       orderBy: { created_at: "desc" },
     }),
+    prisma.usuario.findMany({
+      select: { curso: true },
+      distinct: ["curso"],
+    }),
   ])
 
   if (!usuario) {
@@ -153,6 +135,15 @@ export async function getProfilePageData(userId: string): Promise<ProfilePageDat
       acquiredItemsMap.set(interest.item.id, interest.item)
     }
   }
+
+  const courseOptions = buildCourseOptionsFromCodes(
+      courseRecords .map((course) => course.curso).filter((curso): curso is string => Boolean(curso)),
+  )
+
+  const activeAdsItems = allAds.filter(
+    (item) => (item.quantidade_disponivel ?? 0) > 0,
+  )
+  const historyAdsItems = allAds
 
   return {
     user: {
@@ -170,8 +161,11 @@ export async function getProfilePageData(userId: string): Promise<ProfilePageDat
       cpf: usuario.CPF,
       rg: usuario.RG,
     },
-    activeAds: activeAds.map(mapItemToAd),
-    historyAds: historyAds.map(mapItemToAd),
+    activeAds: activeAdsItems
+      .slice(0, MAX_ACTIVE_AND_ACQUIRED)
+      .map(mapItemToAd),
+    historyAds: historyAdsItems.map(mapItemToAd),
     acquiredItems: Array.from(acquiredItemsMap.values()).map(mapItemToAd),
+    courses: courseOptions,
   }
 }

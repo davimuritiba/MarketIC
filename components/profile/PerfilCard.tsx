@@ -11,6 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import { Calendar, GraduationCap, IdCard, Mail, Phone, Star } from "lucide-react";
 
+import { resolveCourseLabel } from "@/lib/course-labels";
+
+export interface CourseOption {
+  value: string;
+  label: string;
+}
 import type { ProfileUserData } from "@/types/profile";
 
 type FormState = {
@@ -19,13 +25,6 @@ type FormState = {
   curso: string;
   dataNascimento: string;
 };
-
-const DEFAULT_COURSES = [
-  "Ciência da Computação",
-  "Engenharia da Computação",
-  "Sistemas de Informação",
-  "Engenharia de Software",
-];
 
 function toFormState(user: ProfileUserData): FormState {
   return {
@@ -62,20 +61,35 @@ function formatPhone(phone: string | null) {
   return `(${match[1]}) ${match[2]}-${match[3]}`;
 }
 
-export default function ProfileCard({ user }: { user: ProfileUserData }) {
+type ProfileCardProps = {
+  user: ProfileUserData;
+  courses: CourseOption[];
+};
+
+export default function ProfileCard({ user, courses }: ProfileCardProps) {
   const [currentUser, setCurrentUser] = useState<ProfileUserData>(user);
   const [formState, setFormState] = useState<FormState>(() => toFormState(user));
   const [open, setOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const courseOptions = useMemo(() => {
-    const courses = new Set(DEFAULT_COURSES);
-    if (currentUser.curso) {
-      courses.add(currentUser.curso);
+  const { courseOptions, courseLabelMap } = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const course of courses) {
+      map.set(course.value, course.label);
     }
-    return Array.from(courses);
-  }, [currentUser.curso]);
+
+    if (currentUser.curso && !map.has(currentUser.curso)) {
+      const label = resolveCourseLabel(currentUser.curso);
+      map.set(currentUser.curso, label ?? currentUser.curso);
+    }
+
+    const options = Array.from(map.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+
+    return { courseOptions: options, courseLabelMap: map };
+  }, [courses, currentUser.curso]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -246,8 +260,12 @@ export default function ProfileCard({ user }: { user: ProfileUserData }) {
                   </SelectTrigger>
                   <SelectContent>
                     {courseOptions.map((course) => (
-                      <SelectItem key={course} className="cursor-pointer" value={course}>
-                        {course}
+                      <SelectItem
+                        key={course.value}
+                        className="cursor-pointer"
+                        value={course.value}
+                      >
+                        {course.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -310,7 +328,9 @@ export default function ProfileCard({ user }: { user: ProfileUserData }) {
             </li>
             {currentUser.curso && (
               <li className="text-base flex items-center gap-2">
-                <GraduationCap size={20} /> {currentUser.curso}
+                <GraduationCap size={20} />
+                {courseLabelMap.get(currentUser.curso) ??
+                  resolveCourseLabel(currentUser.curso)}
               </li>
             )}
           </ul>

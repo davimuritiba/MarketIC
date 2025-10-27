@@ -2,6 +2,11 @@ export type TransactionLabel = "Venda" | "Empréstimo" | "Doação" | "Troca"
 
 export type ConditionLabel = "Novo" | "Seminovo" | "Usado"
 
+export interface CourseOption {
+  value: string
+  label: string
+}
+
 export interface AdItem {
   id: string
   href: string

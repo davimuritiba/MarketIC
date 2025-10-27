@@ -11,15 +11,16 @@ export default async function PerfilPage() {
     return null
   }
 
-  const { user, activeAds, historyAds, acquiredItems } = await getProfilePageData(
-    session.usuario_id,
-  )
+  const { user, activeAds, historyAds, acquiredItems, courses } =
+    await getProfilePageData(
+      session.usuario_id,
+    )
 
   return (
     <div className="max-w-screen-2xl mx-auto px-4 py-6 grid grid-cols-12 gap-6">
       {/* Coluna esquerda */}
       <div className="col-span-12 md:col-span-4 lg:col-span-3 space-y-10">
-        <ProfileCard user={user} />
+        <ProfileCard user={user} courses={courses} />
       </div>
 
       {/* Coluna direita */}
