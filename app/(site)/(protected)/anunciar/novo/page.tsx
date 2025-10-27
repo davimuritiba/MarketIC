@@ -15,9 +15,7 @@ export default function NovoAnuncioPage() {
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
   const [categoria, setCategoria] = useState("");
-  const [categorias, setCategorias] = useState<
-    { id: string; nome: string; slug?: string | null }[]
-  >([]);
+  const [categorias, setCategorias] = useState< { id: string; nome: string; slug?: string | null }[] >([]);
   const [carregandoCategorias, setCarregandoCategorias] = useState(true);
   const [erroCategorias, setErroCategorias] = useState<string | null>(null);
   const [tipoTransacao, setTipoTransacao] = useState("");
@@ -118,7 +116,7 @@ export default function NovoAnuncioPage() {
     try {
       if (!titulo.trim()) throw new Error("Título é obrigatório.");
       if (!tipoTransacao) throw new Error("Selecione o tipo de transação.");
-      if (!categoria) {
+      if (!categorias) {
         throw new Error("Selecione uma categoria.");
       }
       if (!estadoConservacao) {
@@ -161,8 +159,7 @@ export default function NovoAnuncioPage() {
           tipo_transacao: tipoTransacaoUpper, // backend espera em MAIÚSCULO
           estado_conservacao: estadoConservacaoUpper,
           preco_formatado: tipoTransacaoUpper === "VENDA" ? preco : null,
-          preco_centavos:
-            tipoTransacaoUpper === "VENDA" ? precoCentavos : null,
+          preco_centavos: tipoTransacaoUpper === "VENDA" ? precoCentavos : null,
           quantidade_disponivel: quantidadeNormalizada,
           categoria_nome: categoria,
           imagens,
@@ -293,13 +290,6 @@ export default function NovoAnuncioPage() {
             {erroCategorias && (
               <p className="text-sm text-red-500">{erroCategorias}</p>
             )}
-
-            {/* {categoria === "outros" && (
-              <div className="mt-3 space-y-2">
-                <Label htmlFor="outra-categoria" className="text-sm font-medium">Outra categoria</Label>
-                <Input id="outra-categoria" placeholder="Descreva a categoria" className="h-10" />
-              </div>
-            )} */}
           </div>
 
           {/* Tipo de transação */}
