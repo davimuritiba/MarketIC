@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -81,9 +81,88 @@ export default function CadastroPage() {
   const [telefone, setTelefone] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
   const [curso, setCurso] = useState("");
-  const [fotoDocumentoUrl, setFotoDocumentoUrl] =  useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  type PreviewFile = {
+    file: File;
+    preview: string;
+  };
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [fotoDocumento, setFotoDocumento] = useState<PreviewFile | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (fotoDocumento) {
+        URL.revokeObjectURL(fotoDocumento.preview);
+      }
+    };
+  }, [fotoDocumento]);
+
+  const convertFileToBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result === "string") {
+          resolve(result);
+        } else {
+          reject(new Error("Não foi possível processar o arquivo selecionado."));
+        }
+      };
+      reader.onerror = () => {
+        reject(
+          new Error(
+            "Erro ao ler o arquivo selecionado. Por favor, tente novamente.",
+          ),
+        );
+      };
+      reader.readAsDataURL(file);
+    });
+
+  const handleFotoDocumentoChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      setErrorMessage("A imagem deve ter no máximo 5MB.");
+      return;
+    }
+
+    setErrorMessage(null);
+    setFotoDocumento((prev) => {
+      if (prev) {
+        URL.revokeObjectURL(prev.preview);
+      }
+
+      return {
+        file,
+        preview: URL.createObjectURL(file),
+      };
+    });
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveFotoDocumento = () => {
+    setFotoDocumento((prev) => {
+      if (prev) {
+        URL.revokeObjectURL(prev.preview);
+      }
+
+      return null;
+    });
+  };
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -108,6 +187,14 @@ export default function CadastroPage() {
         setIsSubmitting(false);
         return;
       }
+
+      if (!fotoDocumento) {
+        setErrorMessage("Adicione uma foto do documento.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const fotoDocumentoBase64 = await convertFileToBase64(fotoDocumento.file);
 
       console.log("📤 Enviando dados para /api/register...");
       console.log({
@@ -134,17 +221,19 @@ export default function CadastroPage() {
           telefone,
           dataNascimento,
           curso,
-          // fotoDocumentoUrl,
+          fotoDocumentoUrl: fotoDocumentoBase64,
         }),
       });
 
-      
-    console.log("📥 Resposta recebida:", response);
+      console.log("📥 Resposta recebida:", response);
       if (!response.ok) {
         const data = await response.json().catch(() => null);
         const error = data?.error ?? "Não foi possível realizar o cadastro.";
         throw new Error(error);
       }
+
+      URL.revokeObjectURL(fotoDocumento.preview);
+      setFotoDocumento(null);
 
       router.push("/");
     } catch (error) {
@@ -313,17 +402,53 @@ export default function CadastroPage() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="fotoDocumento" className="text-sm font-semibold">
+              <label className="text-sm font-semibold" htmlFor="fotoDocumento">
                 Foto do documento
               </label>
-              <Input
-                id="fotoDocumento"
-                type="text"
-                placeholder="https://exemplo.com/documento.jpg"
-                className="h-10 bg-neutral-100"
-                value={fotoDocumentoUrl}
-                onChange={(event) => setFotoDocumentoUrl(event.target.value)}
-              />
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                <input
+                  ref={fileInputRef}
+                  id="fotoDocumento"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFotoDocumentoChange}
+                />
+
+                <Button
+                  type="button"
+                  className="w-full sm:w-auto cursor-pointer bg-[#1500FF] hover:bg-[#1200d6]"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Selecionar foto
+                </Button>
+
+                {fotoDocumento ? (
+                  <div className="flex items-center gap-3">
+                    <div className="h-20 w-20 overflow-hidden rounded-full border border-neutral-200 bg-neutral-100">
+                      <img
+                        src={fotoDocumento.preview}
+                        alt="Pré-visualização do documento"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="cursor-pointer px-3"
+                      onClick={handleRemoveFotoDocumento}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Formatos suportados: JPG, PNG ou WEBP. Tamanho máximo de 5MB.
+              </p>
             </div>
 
             {errorMessage ? (

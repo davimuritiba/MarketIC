@@ -41,6 +41,27 @@ function isValidCPF(value: string) {
 }
 
 const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@ic\.ufal\.br$/;
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+const ALLOWED_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
+function parseBase64Image(dataUrl: string) {
+  const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const [, mimeType, base64Data] = match;
+  const paddingMatch = base64Data.match(/=+$/);
+  const padding = paddingMatch ? paddingMatch[0].length : 0;
+  const sizeInBytes = Math.floor((base64Data.length * 3) / 4) - padding;
+
+  return { mimeType, sizeInBytes };
+}
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -114,9 +135,50 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Curso é obrigatório." }, { status: 400 });
   }
 
-  // if (!fotoDocumentoUrl || !fotoDocumentoUrl.trim()) {
-  //   return NextResponse.json({ error: "Foto do documento é obrigatória." }, { status: 400 });
-  // }
+  if (!fotoDocumentoUrl || typeof fotoDocumentoUrl !== "string") {
+    return NextResponse.json(
+      { error: "Foto do documento é obrigatória." },
+      { status: 400 },
+    );
+  }
+
+  const trimmedFotoDocumentoUrl = fotoDocumentoUrl.trim();
+
+  if (!trimmedFotoDocumentoUrl) {
+    return NextResponse.json(
+      { error: "Foto do documento é obrigatória." },
+      { status: 400 },
+    );
+  }
+
+  const parsedImage = parseBase64Image(trimmedFotoDocumentoUrl);
+
+  if (!parsedImage) {
+    return NextResponse.json(
+      {
+        error:
+          "Imagem do documento inválida. Envie um arquivo de imagem válido em formato JPG, PNG ou WEBP.",
+      },
+      { status: 400 },
+    );
+  }
+
+  if (!ALLOWED_IMAGE_MIME_TYPES.has(parsedImage.mimeType.toLowerCase())) {
+    return NextResponse.json(
+      {
+        error:
+          "Formato de imagem não suportado. Utilize arquivos JPG, PNG ou WEBP.",
+      },
+      { status: 400 },
+    );
+  }
+
+  if (parsedImage.sizeInBytes > MAX_IMAGE_SIZE_BYTES) {
+    return NextResponse.json(
+      { error: "A imagem do documento deve ter no máximo 5MB." },
+      { status: 400 },
+    );
+  }
 
   const emailNormalizado = emailInstitucional.trim().toLowerCase();
   const existingUser = await prisma.usuario.findUnique({
@@ -145,7 +207,7 @@ export async function POST(request: Request) {
       telefone: telefone.trim(),
       data_nascimento: new Date(dataNascimento),
       curso: curso.trim(),
-      foto_documento_url: (fotoDocumentoUrl ?? "").trim(),
+      foto_documento_url: trimmedFotoDocumentoUrl,
     },
     select: {
       id: true,
