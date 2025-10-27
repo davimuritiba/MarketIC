@@ -13,14 +13,47 @@ export default function MeusAnunciosPage() {
   const inativos: any[] = [];
 
   const finalizados = [
-    { title: "Produto A", type: "Venda" as "Venda", price: "R$ 100,00", condition: "Novo" as "Novo" },
-    { title: "Produto B", type: "Empréstimo" as "Empréstimo", days: 7, condition: "Seminovo" as "Seminovo" },
-    { title: "Produto C", type: "Doação" as "Doação" },
+    {
+      id: "finalizado-1",
+      href: "/produto/finalizado-1",
+      title: "Produto A",
+      type: "Venda" as const,
+      price: "R$ 100,00",
+      condition: "Novo" as const,
+    },
+    {
+      id: "finalizado-2",
+      href: "/produto/finalizado-2",
+      title: "Produto B",
+      type: "Empréstimo" as const,
+      days: 7,
+      condition: "Seminovo" as const,
+    },
+    {
+      id: "finalizado-3",
+      href: "/produto/finalizado-3",
+      title: "Produto C",
+      type: "Doação" as const,
+    },
   ];
 
   const expirados = [
-    { title: "Produto D", type: "Venda" as "Venda", price: "R$ 50,00", condition: "Usado" as "Usado" },
-    { title: "Produto E", type: "Empréstimo" as "Empréstimo", days: 14, condition: "Seminovo" as "Seminovo" },
+    {
+      id: "expirado-1",
+      href: "/produto/expirado-1",
+      title: "Produto D",
+      type: "Venda" as const,
+      price: "R$ 50,00",
+      condition: "Usado" as const,
+    },
+    {
+      id: "expirado-2",
+      href: "/produto/expirado-2",
+      title: "Produto E",
+      type: "Empréstimo" as const,
+      days: 14,
+      condition: "Seminovo" as const,
+    },
   ];
 
   const counts = {

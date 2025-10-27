@@ -171,6 +171,8 @@ export default function HomePage() {
 
   type AdItem = React.ComponentProps<typeof AdCard>["item"];
   const toAdItem = (p: Produto): AdItem => ({
+    id: p.id,
+    href: `/produto/${p.id}`,
     title: p.titulo,
     type: p.tipo as AdItem["type"],
     price: p.preco ? fmtPreco(p.preco) : undefined,

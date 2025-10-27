@@ -5,28 +5,20 @@ import Link from "next/link"
 import { type ElementType, useState } from "react"
 import { Gift, Repeat2, ShoppingBag, ChevronLeft, ChevronRight, Star, } from "lucide-react"
 
-interface AdItem {
-  title: string
-  type: "Venda" | "Empréstimo" | "Doação"
-  price?: string
-  days?: number
-  condition?: "Novo" | "Seminovo" | "Usado"
-  rating?: number
-  reviews?: number
-  image?: string
-}
+import type { AdItem } from "@/types/ad"
 
 const typeConfig: Record<AdItem["type"], { icon: ElementType; color: string }> = {
   Venda: { icon: ShoppingBag, color: "#EC221F" },
   Empréstimo: { icon: Repeat2, color: "#0A5C0A" },
   Doação: { icon: Gift, color: "#0B0B64" },
+  Troca: { icon: Repeat2, color: "#8A2BE2" },
 }
 
 /** === Card individual === */
 export default function AdCard({ item }: { item: AdItem }) {
   const { icon: Icon, color } = typeConfig[item.type]
   return (
-    <Link href="/produto/1" className="block">
+    <Link href={item.href} className="block">
       <Card className="p-3 border" style={{ borderColor: color }}>
         {item.image ? (
           <img
@@ -46,10 +38,14 @@ export default function AdCard({ item }: { item: AdItem }) {
           <div className="flex items-center justify-between text-xs">
             <p className="text-muted-foreground">
               {item.type === "Venda"
-                ? item.price
+                ? item.price ?? "Preço não informado"
                 : item.type === "Empréstimo"
-                ? `${item.days} dias`
-                : "Não possui classificação"}
+                ? item.days
+                  ? `${item.days} dias`
+                  : "Prazo não informado"
+                : item.type === "Doação"
+                ? "Não possui classificação"
+                : "Proposta de troca"}
             </p>
             {item.type !== "Doação" && item.condition && (
               <span className="font-bold">{item.condition}</span>
@@ -100,8 +96,8 @@ export function AdGridPager({
     <div className="relative">
       {/* grade */}
       <div className={`grid gap-4 ${gridClass}`}>
-        {visible.map((item, i) => (
-          <AdCard key={`${item.title}-${start + i}`} item={item} />
+        {visible.map((item) => (
+          <AdCard key={item.id} item={item} />
         ))}
       </div>
 

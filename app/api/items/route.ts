@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { equal } from "assert";
+import type { EstadoConservacao, TipoTransacao } from "@prisma/client";
 
 export async function GET() {
   try {
@@ -29,6 +29,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const session = await getSession();
+
     if (!session) {
       return new NextResponse("Sessão inválida ou expirada.", { status: 401 });
     }
@@ -38,31 +39,58 @@ export async function POST(req: Request) {
     const {
       titulo,
       descricao,
-      tipo_transacao,       // "VENDA" | "EMPRESTIMO" | "DOACAO" | "ALUGUEL" (se usar aluguel depois)
-      estado_conservacao,   // "NOVO" | "SEMINOVO" | "USADO"
-      preco_centavos,       // number | null (em centavos)
-      preco_formatado,      // string | null (opcional)
+      tipo_transacao, // "VENDA" | "EMPRESTIMO" | "DOACAO" | "ALUGUEL" (se usar aluguel depois)
+      estado_conservacao, // "NOVO" | "SEMINOVO" | "USADO"
+      preco_centavos, // number | null (em centavos)
+      preco_formatado, // string | null (opcional)
       categoria_nome,
       quantidade_disponivel,
       imagens: imagensInput,
     } = body;
 
-    const tipoTransacaoNormalizado = typeof tipo_transacao === "string" ? tipo_transacao.toUpperCase() : "";
-    const estadoConservacaoNormalizado = typeof estado_conservacao === "string" ? estado_conservacao.toUpperCase() : "";
-    const categoriaNomeNormalizado = categoria_nome?.trim();
+    const tipoTransacaoNormalizado =
+      typeof tipo_transacao === "string" ? tipo_transacao.toUpperCase() : "";
+    const estadoConservacaoNormalizado =
+      typeof estado_conservacao === "string"
+        ? estado_conservacao.toUpperCase()
+        : "";
+
+    const validTransactionTypes: TipoTransacao[] = [
+      "VENDA",
+      "TROCA",
+      "DOACAO",
+      "EMPRESTIMO",
+    ];
+    const validConditions: EstadoConservacao[] = [
+      "NOVO",
+      "SEMINOVO",
+      "USADO",
+    ];
 
     // validações essenciais
     if (!titulo?.trim()) {
       return new NextResponse("Título é obrigatório.", { status: 400 });
     }
-    if (!tipoTransacaoNormalizado) {
+    if (
+      !tipoTransacaoNormalizado ||
+      !validTransactionTypes.includes(
+        tipoTransacaoNormalizado as TipoTransacao,
+      )
+    ) {
       return new NextResponse("Tipo de transação é obrigatório.", { status: 400 });
     }
+    const categoriaNomeNormalizado = categoria_nome?.trim();
+
     if (!categoriaNomeNormalizado) {
-      return new NextResponse("Tipo de transação é obrigatório.", { status: 400 });
+      return new NextResponse("Categoria é obrigatória.", { status: 400 });
     }
-    if(!estadoConservacaoNormalizado) {
-      return new NextResponse("Estado de conservação é obrigatório.", { status: 400 });
+    if (
+      !estadoConservacaoNormalizado ||
+      !validConditions.includes(estadoConservacaoNormalizado as EstadoConservacao)
+    ) {
+      return new NextResponse("Estado de conservação é obrigatório.", {
+        status: 400,
+      });
     }
     if (tipoTransacaoNormalizado === "VENDA") {
       if (preco_centavos == null || preco_centavos < 0) {
@@ -103,12 +131,15 @@ export async function POST(req: Request) {
 
     const categoria = await prisma.categoria.findFirst({
       where: {
-        nome: { equals: categoriaNomeNormalizado, mode: "insensitive" },
-      }
+        nome: {
+          equals: categoriaNomeNormalizado,
+          mode: "insensitive",
+        },
+      },
     });
 
-    if(!categoria) {
-      return new NextResponse("Categoria Inválida.", { status: 400 });
+    if (!categoria) {
+      return new NextResponse("Categoria inválida.", { status: 400 });
     }
 
     const item = await prisma.$transaction(async (tx) => {
@@ -116,9 +147,10 @@ export async function POST(req: Request) {
         data: {
           titulo: titulo.trim(),
           descricao: descricao?.trim() || null,
-          tipo_transacao: tipoTransacaoNormalizado,
-          estado_conservacao: estadoConservacaoNormalizado,
-          preco_centavos: tipoTransacaoNormalizado === "VENDA" ? preco_centavos : null,
+          tipo_transacao: tipoTransacaoNormalizado as TipoTransacao,
+          estado_conservacao: estadoConservacaoNormalizado as EstadoConservacao,
+          preco_centavos:
+            tipoTransacaoNormalizado === "VENDA" ? preco_centavos : null,
           preco_formatado: preco_formatado || null,
           usuario_id: session.usuario_id,
           categoria_id: categoria.id,

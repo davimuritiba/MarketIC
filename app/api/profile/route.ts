@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getUserFromRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getProfilePageData } from "@/lib/profile";
 
 export async function GET(request: NextRequest) {
   const user = await getUserFromRequest(request);
@@ -10,42 +11,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
 
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: user.id },
-    select: {
-      id: true,
-      nome: true,
-      email_institucional: true,
-      telefone: true,
-      curso: true,
-      data_nascimento: true,
-      foto_documento_url: true,
-      reputacao_media: true,
-      reputacao_count: true,
-      CPF: true,
-      RG: true,
-    },
-  });
-
-  if (!usuario) {
-    return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
+  try {
+    const data = await getProfilePageData(user.id);
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error("Erro ao buscar perfil:", error);
+    if (error instanceof Error && error.message === "Usuário não encontrado") {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+    return NextResponse.json(
+      { error: "Erro ao buscar perfil." },
+      { status: 500 },
+    );
   }
-
-  return NextResponse.json({
-    user: {
-      id: usuario.id,
-      nome: usuario.nome,
-      emailInstitucional: usuario.email_institucional,
-      telefone: usuario.telefone,
-      curso: usuario.curso,
-      dataNascimento: usuario.data_nascimento.toISOString(),
-      fotoDocumentoUrl: usuario.foto_documento_url,
-      reputacaoMedia: usuario.reputacao_media,
-      reputacaoCount: usuario.reputacao_count ?? 0,
-      cpf: usuario.CPF,
-      rg: usuario.RG,
-    },
-  });
 }
 
 export async function PUT(request: NextRequest) {

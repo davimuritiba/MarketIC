@@ -1,9 +1,13 @@
 import { cookies } from "next/headers";
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
+import type { NextRequest, NextResponse } from "next/server";
+
 import { prisma } from "@/lib/prisma";
 
 const SESSION_COOKIE_NAME = "session_token";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 dias
+
+export const SESSION_COOKIE = SESSION_COOKIE_NAME;
 
 // ===========================
 //  Criptografia de senhas
@@ -50,6 +54,13 @@ export function attachSessionCookie(
   );
 }
 
+export function clearSessionCookie(response: NextResponse | Response) {
+  response.headers.append(
+    "Set-Cookie",
+    `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
+  );
+}
+
 // Obtém a sessão a partir do cookie
 export async function getSession() {
   const cookieStore = await cookies();
@@ -65,6 +76,25 @@ export async function getSession() {
   if (!session || session.expiresAt < new Date()) return null;
 
   return session;
+}
+
+export async function getUserFromRequest(request: NextRequest) {
+  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  const session = await prisma.session.findUnique({
+    where: { token },
+    include: { usuario: true },
+  });
+
+  if (!session || session.expiresAt < new Date()) {
+    return null;
+  }
+
+  return session.usuario;
 }
 
 // Destroi a sessão (logout)
