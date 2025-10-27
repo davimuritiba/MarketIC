@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
+import { equal } from "assert";
 
 export async function GET() {
   try {
@@ -26,6 +28,11 @@ export async function GET() {
 // POST /api/items
 export async function POST(req: Request) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return new NextResponse("Sessão inválida ou expirada.", { status: 401 });
+    }
+
     const body = await req.json();
 
     const {
@@ -35,23 +42,29 @@ export async function POST(req: Request) {
       estado_conservacao,   // "NOVO" | "SEMINOVO" | "USADO"
       preco_centavos,       // number | null (em centavos)
       preco_formatado,      // string | null (opcional)
-      usuario_id,
-      categoria_id,
+      categoria_nome,
       quantidade_disponivel,
       imagens: imagensInput,
     } = body;
+
+    const tipoTransacaoNormalizado = typeof tipo_transacao === "string" ? tipo_transacao.toUpperCase() : "";
+    const estadoConservacaoNormalizado = typeof estado_conservacao === "string" ? estado_conservacao.toUpperCase() : "";
+    const categoriaNomeNormalizado = categoria_nome?.trim();
 
     // validações essenciais
     if (!titulo?.trim()) {
       return new NextResponse("Título é obrigatório.", { status: 400 });
     }
-    if (!tipo_transacao) {
+    if (!tipoTransacaoNormalizado) {
       return new NextResponse("Tipo de transação é obrigatório.", { status: 400 });
     }
-    if (!categoria_id) {
+    if (!categoriaNomeNormalizado) {
       return new NextResponse("Tipo de transação é obrigatório.", { status: 400 });
     }
-    if (tipo_transacao === "VENDA") {
+    if(!estadoConservacaoNormalizado) {
+      return new NextResponse("Estado de conservação é obrigatório.", { status: 400 });
+    }
+    if (tipoTransacaoNormalizado === "VENDA") {
       if (preco_centavos == null || preco_centavos < 0) {
         return new NextResponse("Preço inválido.", { status: 400 });
       }
@@ -88,17 +101,27 @@ export async function POST(req: Request) {
       });
     }
 
+    const categoria = await prisma.categoria.findFirst({
+      where: {
+        nome: { equals: categoriaNomeNormalizado, mode: "insensitive" },
+      }
+    });
+
+    if(!categoria) {
+      return new NextResponse("Categoria Inválida.", { status: 400 });
+    }
+
     const item = await prisma.$transaction(async (tx) => {
       const createdItem = await tx.item.create({
         data: {
           titulo: titulo.trim(),
           descricao: descricao?.trim() || null,
-          tipo_transacao: tipo_transacao,
-          estado_conservacao: estado_conservacao || null,
-          preco_centavos: tipo_transacao === "VENDA" ? preco_centavos : null,
+          tipo_transacao: tipoTransacaoNormalizado,
+          estado_conservacao: estadoConservacaoNormalizado,
+          preco_centavos: tipoTransacaoNormalizado === "VENDA" ? preco_centavos : null,
           preco_formatado: preco_formatado || null,
-          usuario_id: usuario_id,
-          categoria_id: categoria_id || null,
+          usuario_id: session.usuario_id,
+          categoria_id: categoria.id,
           quantidade_disponivel: quantidadeNormalizada,
         },
         select: { id: true },

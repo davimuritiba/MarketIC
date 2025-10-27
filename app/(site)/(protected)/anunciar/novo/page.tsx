@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ImageIcon } from "lucide-react";
 
 export default function NovoAnuncioPage() {
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -14,6 +13,9 @@ export default function NovoAnuncioPage() {
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
   const [categoria, setCategoria] = useState("");
+  const [categorias, setCategorias] = useState<{ id: string; nome: string; slug?: string | null }[]>([]);
+  const [carregandoCategorias, setCarregandoCategorias] = useState(true);
+  const [erroCategorias, setErroCategorias] = useState<string | null>(null);
   const [tipoTransacao, setTipoTransacao] = useState("");
   const [estadoConservacao, setEstadoConservacao] = useState("");
   const [quantidade, setQuantidade] = useState("1");
@@ -35,6 +37,34 @@ export default function NovoAnuncioPage() {
     return () => {
       previewsRef.current.forEach((file) => URL.revokeObjectURL(file.preview));
     };
+  }, []);
+
+  useEffect(() => {
+    async function carregarCategorias() {
+      try {
+        setCarregandoCategorias(true);
+        const res = await fetch("/api/categories");
+        if (!res.ok) {
+          throw new Error(await res.text());
+        }
+
+        const data = (await res.json()) as {
+          id: string;
+          nome: string;
+          slug?: string | null;
+        }[];
+
+        setCategorias(data);
+        setErroCategorias(null);
+      } catch (error) {
+        console.error("Erro ao carregar categorias", error);
+        setErroCategorias("Não foi possível carregar as categorias.");
+      } finally {
+        setCarregandoCategorias(false);
+      }
+    }
+
+    void carregarCategorias();
   }, []);
 
   // Exibição (R$ x) e valor salvo (centavos)
@@ -84,6 +114,12 @@ export default function NovoAnuncioPage() {
     try {
       if (!titulo.trim()) throw new Error("Título é obrigatório.");
       if (!tipoTransacao) throw new Error("Selecione o tipo de transação.");
+      if (!categoria) {
+        throw new Error("Selecione uma categoria.");
+      }
+      if (!estadoConservacao) {
+        throw new Error("Selecione o estado de conservação.");
+      }
       if (tipoTransacao === "venda" && (precoCentavos == null || precoCentavos < 0)) {
         throw new Error("Informe um preço válido.");
       }
@@ -109,21 +145,22 @@ export default function NovoAnuncioPage() {
         );
       }
 
+      const tipoTransacaoUpper = tipoTransacao.toUpperCase();
+      const estadoConservacaoUpper = estadoConservacao.toUpperCase();
+
       const res = await fetch("/api/items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           titulo,
           descricao,
-          tipo_transacao: tipoTransacao.toUpperCase(),      // backend espera em MAIÚSCULO
-          estado_conservacao: estadoConservacao.toUpperCase(),
-          preco_formatado: tipoTransacao === "venda" ? preco : null,
-          preco_centavos:  tipoTransacao === "venda" ? precoCentavos : null,
+          tipo_transacao: tipoTransacaoUpper, // backend espera em MAIÚSCULO
+          estado_conservacao: estadoConservacaoUpper,
+          preco_formatado: tipoTransacaoUpper === "VENDA" ? preco : null,
+          preco_centavos:
+            tipoTransacaoUpper === "VENDA" ? precoCentavos : null,
           quantidade_disponivel: quantidadeNormalizada,
-          // TODO: substitua pelo fluxo real:
-          usuario_id: "6398473e-461e-4a07-a76e-111f627ef873",
-          categoria_id: "c0d49de1-54dc-409b-99c2-8f0af6867ae7",
-          categoria_slug: categoria || null,
+          categoria_nome: categoria,
           imagens,
         }),
       });
@@ -222,19 +259,35 @@ export default function NovoAnuncioPage() {
           {/* Categoria */}
           <div className="space-y-2">
             <Label className="text-base font-semibold">Categoria</Label>
-            <Select onValueChange={setCategoria}>
+            <Select
+              value={categoria}
+              onValueChange={setCategoria}
+              disabled={carregandoCategorias || !!erroCategorias}
+            >
               <SelectTrigger className="h-10 cursor-pointer">
-                <SelectValue placeholder="Selecione uma categoria" />
+                <SelectValue
+                  placeholder={
+                    carregandoCategorias
+                      ? "Carregando categorias..."
+                      : "Selecione uma categoria"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem className="cursor-pointer" value="eletronicos">Eletrônicos</SelectItem>
-                <SelectItem className="cursor-pointer" value="livros">Livros</SelectItem>
-                <SelectItem className="cursor-pointer" value="hobbies">Hobbies</SelectItem>
-                <SelectItem className="cursor-pointer" value="esportes">Esportes</SelectItem>
-                <SelectItem className="cursor-pointer" value="celulares">Celulares</SelectItem>
-                <SelectItem className="cursor-pointer" value="outros">Outros</SelectItem>
+                {categorias.map((cat) => (
+                  <SelectItem
+                    key={cat.id}
+                    className="cursor-pointer"
+                    value={cat.nome}
+                  >
+                    {cat.nome}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
+            {erroCategorias && (
+              <p className="text-sm text-red-500">{erroCategorias}</p>
+            )}
 
             {/* {categoria === "outros" && (
               <div className="mt-3 space-y-2">
