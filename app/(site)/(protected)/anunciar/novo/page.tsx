@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,11 +10,14 @@ import { Button } from "@/components/ui/button";
 
 export default function NovoAnuncioPage() {
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const router = useRouter();
 
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
   const [categoria, setCategoria] = useState("");
-  const [categorias, setCategorias] = useState<{ id: string; nome: string; slug?: string | null }[]>([]);
+  const [categorias, setCategorias] = useState<
+    { id: string; nome: string; slug?: string | null }[]
+  >([]);
   const [carregandoCategorias, setCarregandoCategorias] = useState(true);
   const [erroCategorias, setErroCategorias] = useState<string | null>(null);
   const [tipoTransacao, setTipoTransacao] = useState("");
@@ -25,7 +29,7 @@ export default function NovoAnuncioPage() {
   };
 
   const [selectedFiles, setSelectedFiles] = useState<PreviewFile[]>([]);
-  const [mensagem, setMensagem] = useState("");
+  const [mensagemErro, setMensagemErro] = useState("");
 
   const previewsRef = useRef<PreviewFile[]>([]);
 
@@ -109,7 +113,7 @@ export default function NovoAnuncioPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setMensagem("");
+    setMensagemErro("");
 
     try {
       if (!titulo.trim()) throw new Error("Título é obrigatório.");
@@ -170,26 +174,27 @@ export default function NovoAnuncioPage() {
         throw new Error(text || "Erro ao criar o anúncio");
       }
 
-      setMensagem("Anúncio criado com sucesso!");
-      // limpa form
-      setTitulo("");
-      setDescricao("");
-      setCategoria("");
-      setTipoTransacao("");
-      setEstadoConservacao("");
-      setQuantidade("1");
-      setSelectedFiles((prev) => {
-        prev.forEach((file) => URL.revokeObjectURL(file.preview));
-        return [];
+      const data = (await res.json()) as { id?: string | number };
+      const itemId = data?.id;
+
+      if (itemId == null) {
+        throw new Error("Não foi possível identificar o anúncio criado.");
+      }
+
+      selectedFiles.forEach(({ preview }) => {
+        URL.revokeObjectURL(preview);
       });
+
+      setSelectedFiles([]);
+
       if (fileRef.current) {
         fileRef.current.value = "";
       }
-      setPreco("");
-      setPrecoCentavos(null);
+
+      router.push(`/produto/${itemId}`);
     } catch (err: any) {
-      setMensagem(err?.message || "Erro ao criar o anúncio.");
-    } 
+      setMensagemErro(err?.message || "Erro ao criar o anúncio.");
+    }
   }
 
 
@@ -288,6 +293,13 @@ export default function NovoAnuncioPage() {
             {erroCategorias && (
               <p className="text-sm text-red-500">{erroCategorias}</p>
             )}
+
+            {/* {categoria === "outros" && (
+              <div className="mt-3 space-y-2">
+                <Label htmlFor="outra-categoria" className="text-sm font-medium">Outra categoria</Label>
+                <Input id="outra-categoria" placeholder="Descreva a categoria" className="h-10" />
+              </div>
+            )} */}
           </div>
 
           {/* Tipo de transação */}
@@ -425,8 +437,8 @@ export default function NovoAnuncioPage() {
             </Button>
           </div>
 
-          {mensagem && (
-            <p className="mt-4 text-sm text-green-600">{mensagem}</p>
+          {mensagemErro && (
+            <p className="mt-4 text-sm text-red-600">{mensagemErro}</p>
           )}
         </form>
       </section>
