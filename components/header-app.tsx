@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Grid2X2, Mail, Plus, ShoppingCart } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from "@/components/ui/dialog";
 
 type HeaderUser = {
   name: string | null;
@@ -19,6 +20,7 @@ export function HeaderApp({ user }: HeaderAppProps) {
   const detailsRef = useRef<HTMLDetailsElement | null>(null);
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false); 
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const handleCloseDropdown = useCallback(() => {
     const details = detailsRef.current;
@@ -42,12 +44,23 @@ export function HeaderApp({ user }: HeaderAppProps) {
     } catch (error) {
       console.error("Erro ao encerrar sessão", error);
     } finally {
+      setIsLogoutModalOpen(false);
       handleCloseDropdown();
       router.push("/login");
       router.refresh();
       setIsLoggingOut(false);
     }
   }, [handleCloseDropdown, isLoggingOut, router]);
+
+  const handleOpenLogoutModal = useCallback(() => {
+    handleCloseDropdown();
+    setIsLogoutModalOpen(true);
+  }, [handleCloseDropdown]);
+
+  const handleCloseLogoutModal = useCallback(() => {
+    if (isLoggingOut) return;
+    setIsLogoutModalOpen(false);
+  }, [isLoggingOut]);
 
   const initials = user?.name
     ?.split(" ")
@@ -124,10 +137,11 @@ export function HeaderApp({ user }: HeaderAppProps) {
             <Mail size={18} />
           </Link>
 
-          <details ref={detailsRef} className="relative">
+          <details ref={detailsRef} className="relative z-10">
             <summary
               className="flex items-center justify-center rounded-full bg-neutral-200 w-9 h-9 cursor-pointer overflow-hidden [&::-webkit-details-marker]:hidden"
               title="Perfil"
+              aria-haspopup="menu"
             >
               {user?.avatarUrl ? (
                 <Image
@@ -148,6 +162,7 @@ export function HeaderApp({ user }: HeaderAppProps) {
                 href="/perfil"
                 className="px-4 py-2 text-sm hover:bg-neutral-100"
                 onClick={handleCloseDropdown}
+                role="menuitem"
               >
                 Meu perfil
               </Link>
@@ -155,6 +170,7 @@ export function HeaderApp({ user }: HeaderAppProps) {
                 href="/meus-anuncios"
                 className="px-4 py-2 text-sm hover:bg-neutral-100"
                 onClick={handleCloseDropdown}
+                role="menuitem"
               >
                 Meus Anúncios
               </Link>
@@ -162,20 +178,55 @@ export function HeaderApp({ user }: HeaderAppProps) {
                 href="/carrinho"
                 className="px-4 py-2 text-sm hover:bg-neutral-100"
                 onClick={handleCloseDropdown}
+                role="menuitem"
               >
                 Meu carrinho
               </Link>
               <button
                 type="button"
                 className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer text-left"
-                onClick={handleLogout}
-                disabled={isLoggingOut}
+                onClick={handleOpenLogoutModal}
+                role="menuitem"
               >
                 Sair da conta
               </button>
             </div>
           </details>
         </nav>
+        <Dialog
+          open={isLogoutModalOpen}
+          onOpenChange={(open) => {
+            if (isLoggingOut) return;
+            setIsLogoutModalOpen(open);
+          }}
+        >
+          <DialogContent showCloseButton={false}>
+            <DialogHeader>
+              <DialogTitle>Encerrar sessão</DialogTitle>
+              <DialogDescription>
+                Tem certeza que deseja encerrar sua sessão?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <button
+                type="button"
+                className="px-4 py-2 text-sm rounded-md border border-neutral-300 text-neutral-700 hover:bg-neutral-100 cursor-pointer"
+                onClick={handleCloseLogoutModal}
+                disabled={isLoggingOut}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 cursor-pointer"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+              >
+                Encerrar
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </header>
   );
