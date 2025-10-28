@@ -126,7 +126,7 @@ export default function MeusAnunciosPage() {
             <EmptyState subtitle="Sem anúncios expirados no momento." />
           ) : (
             <div className="space-y-4">
-              <Button className="bg-[#1500FF] hover:bg-[#1200d6] px-6 h-10 sm:h-12 text-sm sm:text-base">Renovar</Button>
+              <Button className="bg-[#1500FF] hover:bg-[#1200d6] px-12 h-10 sm:h-10 text-sm sm:text-base cursor-pointer">Renovar</Button>
               <AdGridPager
                 items={expirados}
                 maxPerPage={4}

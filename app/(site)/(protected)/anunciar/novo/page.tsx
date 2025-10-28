@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { LoadingOverlay } from "@/components/loading-overlay";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,6 +29,7 @@ export default function NovoAnuncioPage() {
 
   const [selectedFiles, setSelectedFiles] = useState<PreviewFile[]>([]);
   const [mensagemErro, setMensagemErro] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const previewsRef = useRef<PreviewFile[]>([]);
 
@@ -112,6 +114,7 @@ export default function NovoAnuncioPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMensagemErro("");
+    setIsSubmitting(true);
 
     try {
       if (!titulo.trim()) throw new Error("Título é obrigatório.");
@@ -191,6 +194,7 @@ export default function NovoAnuncioPage() {
       router.push(`/produto/${itemId}`);
     } catch (err: any) {
       setMensagemErro(err?.message || "Erro ao criar o anúncio.");
+      setIsSubmitting(false);
     }
   }
 
@@ -229,6 +233,10 @@ export default function NovoAnuncioPage() {
 
   return (
     <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <LoadingOverlay
+        isOpen={isSubmitting}
+        message="Publicando seu anúncio..."
+      />
       <h1 className="text-3xl font-semibold mb-6">Novo Anúncio</h1>
 
       {/* painel principal */}
