@@ -1,5 +1,4 @@
-export type TransactionLabel = "Venda" | "Empréstimo" | "Doação" | "Troca"
-
+export type TransactionLabel = "Venda" | "Empréstimo" | "Doação"
 export type ConditionLabel = "Novo" | "Seminovo" | "Usado"
 
 export interface CourseOption {
@@ -11,7 +10,7 @@ export interface AdItem {
   id: string
   href: string
   title: string
-  type: "Venda" | "Empréstimo" | "Doação" | "Troca"
+  type: "Venda" | "Empréstimo" | "Doação" 
   price?: string
   days?: number
   condition?: "Novo" | "Seminovo" | "Usado"

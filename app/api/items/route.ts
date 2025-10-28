@@ -57,7 +57,6 @@ export async function POST(req: Request) {
 
     const validTransactionTypes: TipoTransacao[] = [
       "VENDA",
-      "TROCA",
       "DOACAO",
       "EMPRESTIMO",
     ];

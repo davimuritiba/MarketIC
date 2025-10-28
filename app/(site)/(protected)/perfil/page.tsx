@@ -1,5 +1,6 @@
 import ProfileCard from "@/components/profile/PerfilCard"
 import { AdGridPager } from "@/components/AdCard"
+import { ProfileAdGridPager } from "@/components/profile/ProfileAdGridPager"
 
 import { getSession } from "@/lib/auth"
 import { getProfilePageData } from "@/lib/profile"
@@ -28,7 +29,7 @@ export default async function PerfilPage() {
         <section className="mb-10">
           <h2 className="text-2xl font-semibold mb-4">Anúncios Ativos</h2>
           {activeAds.length > 0 ? (
-            <AdGridPager
+            <ProfileAdGridPager
               items={activeAds}
               maxPerPage={4}
               gridClass="grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
@@ -60,7 +61,7 @@ export default async function PerfilPage() {
       <section className="col-span-12">
         <h2 className="text-2xl font-semibold mb-4">Histórico de Anúncios</h2>
         {historyAds.length > 0 ? (
-          <AdGridPager
+          <ProfileAdGridPager
             items={historyAds}
             maxPerPage={5}
             gridClass="grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"

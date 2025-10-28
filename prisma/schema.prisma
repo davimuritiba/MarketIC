@@ -130,7 +130,6 @@ model Session {
 
 enum TipoTransacao {
   VENDA
-  TROCA
   DOACAO
   EMPRESTIMO
 }

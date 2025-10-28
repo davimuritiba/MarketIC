@@ -631,7 +631,7 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
               <DialogFooter className="mt-2">
                 <Button
                   type="button"
-                  className="cursor-pointer bg-red-500 hover:bg-red-600 text-white"
+                  className="cursor-pointer bg-neutral-300 text-neutral-800 hover:bg-neutral-400"
                   onClick={() => setDeleteOpen(false)}
                   disabled={isDeleting}
                 >
@@ -639,7 +639,7 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
                 </Button>
                 <Button
                   type="button"
-                  className="cursor-pointer bg-neutral-300 text-neutral-800 hover:bg-neutral-400"
+                  className="cursor-pointer  bg-red-500 hover:bg-red-600 text-white"
                   onClick={handleDeleteProfile}
                   disabled={isDeleting}
                 >

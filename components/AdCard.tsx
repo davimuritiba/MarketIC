@@ -2,14 +2,14 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
-import { type ElementType, useState } from "react"
+import { type ElementType, type ReactNode, useEffect, useState } from "react"
 import { Gift, Repeat2, ShoppingBag, ChevronLeft, ChevronRight, Star, } from "lucide-react"
 
 export interface AdItem {
   id: string
   href: string
   title: string
-  type: "Venda" | "Empréstimo" | "Doação" | "Troca"
+  type: "Venda" | "Empréstimo" | "Doação" 
   price?: string
   days?: number
   condition?: "Novo" | "Seminovo" | "Usado"
@@ -22,15 +22,24 @@ const typeConfig: Record<AdItem["type"], { icon: ElementType; color: string }> =
   Venda: { icon: ShoppingBag, color: "#EC221F" },
   Empréstimo: { icon: Repeat2, color: "#0A5C0A" },
   Doação: { icon: Gift, color: "#0B0B64" },
-  Troca: { icon: Repeat2, color: "#8A2BE2" },
 }
 
 /** === Card individual === */
-export default function AdCard({ item }: { item: AdItem }) {
+export default function AdCard({
+  item,
+  actions,
+}: {
+  item: AdItem
+  actions?: ReactNode
+}) {
   const { icon: Icon, color } = typeConfig[item.type]
   return (
-    <Link href={item.href} className="block">
-      <Card className="p-3 border" style={{ borderColor: color }}>
+    <Card
+      className="relative border p-3"
+      style={{ borderColor: color }}
+    >
+      {actions ? <div className="absolute right-2 top-2 z-20">{actions}</div> : null}
+      <Link href={item.href} className="block">
         {item.image ? (
           <img
             src={item.image}
@@ -40,12 +49,12 @@ export default function AdCard({ item }: { item: AdItem }) {
         ) : (
           <div className="mb-2 aspect-square w-full rounded-md bg-muted" />
         )}
-        <CardContent className="p-0 space-y-1">
+        <CardContent className="space-y-1 p-0">
           <div className="flex items-center gap-2" style={{ color }}>
-            <Icon className="w-4 h-4" />
-            <span className="font-medium text-sm">{item.type}</span>
+            <Icon className="h-4 w-4" />
+            <span className="text-sm font-medium">{item.type}</span>
           </div>
-          <h3 className="font-medium text-sm">{item.title}</h3>
+          <h3 className="text-sm font-medium">{item.title}</h3>
           <div className="flex items-center justify-between text-xs">
             <p className="text-muted-foreground">
               {item.type === "Venda"
@@ -63,7 +72,7 @@ export default function AdCard({ item }: { item: AdItem }) {
             )}
           </div>
           {item.rating !== undefined && (
-            <div className="flex items-center gap-1 mt-1 text-xs">
+            <div className="mt-1 flex items-center gap-1 text-xs">
               <div className="flex text-yellow-500">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star
@@ -79,8 +88,8 @@ export default function AdCard({ item }: { item: AdItem }) {
             </div>
           )}
         </CardContent>
-      </Card>
-    </Link>
+      </Link>
+    </Card>
   )
 }
 
@@ -89,14 +98,23 @@ export function AdGridPager({
   items,
   maxPerPage,
   gridClass,
+  renderActions,
 }: {
   items: AdItem[]
   maxPerPage: number // 4 (Ativos) | 5 (Histórico)
   gridClass: string  // colunas responsivas
+  renderActions?: (item: AdItem) => React.ReactNode
 }) {
   const [page, setPage] = useState(0)
   const totalPages = Math.max(1, Math.ceil(items.length / maxPerPage))
   const canPaginate = items.length > maxPerPage
+
+  useEffect(() => {
+    const updatedTotalPages = Math.max(1, Math.ceil(items.length / maxPerPage))
+    if (page > updatedTotalPages - 1) {
+      setPage(updatedTotalPages - 1)
+    }
+  }, [items.length, maxPerPage, page])
 
   const start = page * maxPerPage
   const visible = items.slice(start, start + maxPerPage)
@@ -108,7 +126,11 @@ export function AdGridPager({
       {/* grade */}
       <div className={`grid gap-4 ${gridClass}`}>
         {visible.map((item) => (
-          <AdCard key={item.id} item={item} />
+          <AdCard
+            key={item.id}
+            item={item}
+            actions={renderActions ? renderActions(item) : undefined}
+          />
         ))}
       </div>
 

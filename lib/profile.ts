@@ -13,7 +13,6 @@ const TRANSACTION_LABEL: Record<string, TransactionLabel> = {
   VENDA: "Venda",
   EMPRESTIMO: "Empréstimo",
   DOACAO: "Doação",
-  TROCA: "Troca",
 }
 
 const CONDITION_LABEL: Record<string, ConditionLabel> = {
