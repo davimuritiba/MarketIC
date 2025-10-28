@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Grid2X2, Mail, Plus, ShoppingCart } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 type HeaderUser = {
   name: string | null;
@@ -16,6 +17,8 @@ type HeaderAppProps = {
 
 export function HeaderApp({ user }: HeaderAppProps) {
   const detailsRef = useRef<HTMLDetailsElement | null>(null);
+  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false); 
 
   const handleCloseDropdown = useCallback(() => {
     const details = detailsRef.current;
@@ -23,6 +26,28 @@ export function HeaderApp({ user }: HeaderAppProps) {
       details.removeAttribute("open");
     }
   }, []);
+
+  const handleLogout = useCallback(async () => {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      document.cookie = "session_token=; Max-Age=0; path=/";
+    } catch (error) {
+      console.error("Erro ao encerrar sessão", error);
+    } finally {
+      handleCloseDropdown();
+      router.push("/login");
+      router.refresh();
+      setIsLoggingOut(false);
+    }
+  }, [handleCloseDropdown, isLoggingOut, router]);
 
   const initials = user?.name
     ?.split(" ")
@@ -140,6 +165,14 @@ export function HeaderApp({ user }: HeaderAppProps) {
               >
                 Meu carrinho
               </Link>
+              <button
+                type="button"
+                className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer text-left"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+              >
+                Sair da conta
+              </button>
             </div>
           </details>
         </nav>

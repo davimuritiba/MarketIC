@@ -63,6 +63,8 @@ export function clearSessionCookie(response: NextResponse | Response) {
 
 // Obtém a sessão a partir do cookie
 export async function getSession() {
+  await pruneExpiredSessions();
+
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
@@ -79,6 +81,8 @@ export async function getSession() {
 }
 
 export async function getUserFromRequest(request: NextRequest) {
+  await pruneExpiredSessions();
+
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
 
   if (!token) {
@@ -99,7 +103,17 @@ export async function getUserFromRequest(request: NextRequest) {
 
 // Destroi a sessão (logout)
 export async function deleteSession(token: string) {
-  await prisma.session.delete({
+  await prisma.session.deleteMany({
     where: { token },
+  });
+}
+
+export async function pruneExpiredSessions() {
+  await prisma.session.deleteMany({
+    where: {
+      expiresAt: {
+        lt: new Date(),
+      },
+    },
   });
 }

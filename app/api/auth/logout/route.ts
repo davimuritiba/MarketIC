@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 import { SESSION_COOKIE, clearSessionCookie, deleteSession } from "@/lib/auth";
 
-export async function POST(request: NextRequest) {
-  const token = request.cookies.get(SESSION_COOKIE)?.value;
-  if (token) {
-    await deleteSession(token);
+export async function POST() {
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get(SESSION_COOKIE)?.value;
+
+  if (sessionToken) {
+    await deleteSession(sessionToken);
   }
 
-  const response = NextResponse.json({ success: true });
+  const response = NextResponse.json({ message: "Sessão encerrada com sucesso" });
   clearSessionCookie(response);
 
   return response;
