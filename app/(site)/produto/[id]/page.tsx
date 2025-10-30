@@ -39,6 +39,20 @@ export default async function ProdutoPage({
           reputacao_count: true,
         },
       },
+      avaliacoes: {
+        include: {
+          usuario: {
+            select: {
+              id: true,
+              nome: true,
+              foto_documento_url: true,
+            },
+          },
+        },
+        orderBy: {
+          data: "desc",
+        },
+      },
     },
   });
 
@@ -67,6 +81,18 @@ export default async function ProdutoPage({
       })
     : null;
 
+  const productReviews = item.avaliacoes ?? [];
+  const productRatingCount = productReviews.length;
+  const productRating = productRatingCount
+    ? productReviews.reduce((total, review) => total + review.nota, 0) /
+      productRatingCount
+    : 0;
+
+  const viewerIsOwner = viewerUserId === item.usuario_id;
+  const viewerHasReview = viewerUserId
+    ? productReviews.some((review) => review.usuario_id === viewerUserId)
+    : false;
+
   const product: ProductData = {
     id: item.id,
     title: item.titulo,
@@ -91,6 +117,24 @@ export default async function ProdutoPage({
     isFavorited: Boolean(favoriteRecord),
     viewerCanFavorite:
       Boolean(viewerUserId) && item.usuario_id !== viewerUserId,
+    productRating,
+    productRatingCount,
+    reviews: productReviews.map((review) => ({
+      id: review.id,
+      rating: review.nota,
+      title: review.titulo,
+      comment: review.comentario,
+      createdAt: review.data.toISOString(),
+      reviewer: {
+        id: review.usuario.id,
+        name: review.usuario.nome,
+        avatarUrl: review.usuario.foto_documento_url ?? null,
+      },
+    })),
+    viewerCanReview:
+      Boolean(viewerUserId) && !viewerIsOwner && !viewerHasReview,
+    viewerHasReview: viewerHasReview,
+    viewerIsOwner,
   };
 
   return <ProdutoPageClient product={product} />;
