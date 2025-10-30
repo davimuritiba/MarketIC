@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-import type { DashboardAdItem, MyAdsData } from "@/types/my-ads"
+import type { DashboardAdItem, MyAdsData } from "@/types/meus-anuncios"
 
 interface MyAdsDashboardProps {
   data: MyAdsData

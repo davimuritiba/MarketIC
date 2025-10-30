@@ -3,7 +3,7 @@ import { computeRemovalInfo, resolveItemStatus, type StatusSource, } from "@/lib
 import { prisma } from "@/lib/prisma"
 import { refreshExpiredItemsForUser } from "@/lib/status-service"
 
-import type { DashboardAdItem, MyAdsData } from "@/types/my-ads"
+import type { DashboardAdItem, MyAdsData } from "@/types/meus-anuncios"
 
 type DashboardItem = PrismaItemWithRelations & StatusSource
 

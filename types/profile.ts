@@ -1,5 +1,5 @@
 import type { AdItem as CardAdItem } from "@/components/AdCard"
-import type { DashboardStatusLabel } from "@/types/my-ads"
+import type { DashboardStatusLabel } from "@/types/meus-anuncios"
 
 export type TransactionLabel = "Venda" | "Empréstimo" | "Doação"
 export type ConditionLabel = "Novo" | "Seminovo" | "Usado"

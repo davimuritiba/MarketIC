@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation"
 
-import MyAdsDashboard from "@/components/my-ads/MyAdsDashboard"
+import MyAdsDashboard from "@/components/meus-anuncios/MeusAnunciosDashboard"
 import { getSession } from "@/lib/auth"
-import { getMyAdsDashboardData } from "@/lib/my-ads"
+import { getMyAdsDashboardData } from "@/lib/meus-anuncios"
 
 export default async function MeusAnunciosPage() {
   const session = await getSession()

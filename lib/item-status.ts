@@ -1,6 +1,6 @@
 import type { StatusAnuncio } from "@prisma/client"
 
-import type { DashboardStatusLabel } from "@/types/my-ads"
+import type { DashboardStatusLabel } from "@/types/meus-anuncios"
 
 export const DEFAULT_EXPIRATION_MONTHS = 2
 export const REMOVAL_GRACE_PERIOD_MONTHS = 1
