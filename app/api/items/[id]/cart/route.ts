@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -93,4 +94,143 @@ export async function GET() {
     .filter((item): item is NonNullable<typeof item> => Boolean(item));
 
   return NextResponse.json({ items: formatted }, { status: 200 });
+}
+
+export async function POST(
+  _request: Request,
+  { params }: { params: { id: string } },
+) {
+  const session = await getSession();
+
+  if (!session) {
+    return NextResponse.json(
+      { error: "Sessão inválida ou expirada." },
+      { status: 401 },
+    );
+  }
+
+  const itemId = params.id;
+
+  if (!itemId) {
+    return NextResponse.json({ error: "Item inválido." }, { status: 400 });
+  }
+
+  const item = await prisma.item.findUnique({
+    where: { id: itemId },
+    select: {
+      id: true,
+      usuario_id: true,
+      status: true,
+      tipo_transacao: true,
+      prazo_dias: true,
+    },
+  });
+
+  if (!item) {
+    return NextResponse.json(
+      { error: "Anúncio não encontrado." },
+      { status: 404 },
+    );
+  }
+
+  if (item.usuario_id === session.usuario_id) {
+    return NextResponse.json(
+      { error: "Você não pode adicionar o próprio anúncio ao carrinho." },
+      { status: 400 },
+    );
+  }
+
+  if (item.status !== "PUBLICADO") {
+    return NextResponse.json(
+      { error: "Este anúncio não está disponível para adição ao carrinho." },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const now = new Date();
+
+    await prisma.carrinhoItem.upsert({
+      where: {
+        usuario_id_anuncio_id: {
+          usuario_id: session.usuario_id,
+          anuncio_id: itemId,
+        },
+      },
+      create: {
+        usuario_id: session.usuario_id,
+        anuncio_id: itemId,
+        quantidade: 1,
+        interested_flag: false,
+        prazo_snapshot: item.tipo_transacao === "EMPRESTIMO" ? item.prazo_dias ?? null : null,
+        created_at: now,
+        updated_at: now,
+      },
+      update: {
+        updated_at: now,
+      },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2003") {
+        return NextResponse.json(
+          { error: "Não foi possível associar o item ao carrinho." },
+          { status: 400 },
+        );
+      }
+    }
+
+    console.error("Erro ao adicionar item ao carrinho", error);
+    return NextResponse.json(
+      { error: "Não foi possível adicionar o item ao carrinho." },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({ inCart: true }, { status: 200 });
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: { id: string } },
+) {
+  const session = await getSession();
+
+  if (!session) {
+    return NextResponse.json(
+      { error: "Sessão inválida ou expirada." },
+      { status: 401 },
+    );
+  }
+
+  const itemId = params.id;
+
+  if (!itemId) {
+    return NextResponse.json({ error: "Item inválido." }, { status: 400 });
+  }
+
+  try {
+    await prisma.carrinhoItem.delete({
+      where: {
+        usuario_id_anuncio_id: {
+          usuario_id: session.usuario_id,
+          anuncio_id: itemId,
+        },
+      },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2025") {
+        return NextResponse.json({ inCart: false }, { status: 200 });
+      }
+    }
+
+    console.error("Erro ao remover item do carrinho", error);
+    return NextResponse.json(
+      { error: "Não foi possível remover o item do carrinho." },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({ inCart: false }, { status: 200 });
 }

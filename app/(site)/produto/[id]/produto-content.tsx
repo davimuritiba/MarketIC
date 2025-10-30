@@ -514,7 +514,7 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
                 </Button>
                 <Button
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 cursor-pointer"
                   onClick={handleRemoveFromCart}
                   disabled={isUpdatingCart}
                 >
