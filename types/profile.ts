@@ -1,3 +1,6 @@
+import type { AdItem as CardAdItem } from "@/components/AdCard"
+import type { DashboardStatusLabel } from "@/types/my-ads"
+
 export type TransactionLabel = "Venda" | "Empréstimo" | "Doação"
 export type ConditionLabel = "Novo" | "Seminovo" | "Usado"
 
@@ -6,21 +9,12 @@ export interface CourseOption {
   label: string
 }
 
-export interface AdItem {
-  id: string
-  href: string
-  title: string
-  type: "Venda" | "Empréstimo" | "Doação" 
-  price?: string
-  days?: number
-  condition?: "Novo" | "Seminovo" | "Usado"
-  rating?: number
-  reviews?: number
-  image?: string
+export interface ProfileAdItem extends CardAdItem {
+  statusCode: "PUBLICADO" | "INATIVO" | "FINALIZADO" | "EXPIRADO"
+  statusLabel: DashboardStatusLabel
+  publishedAt: string
+  expiresAt: string | null
 }
-
-
-export interface ProfileAdItem extends AdItem {}
 
 export interface ProfileUserData {
   id: string
@@ -40,5 +34,6 @@ export interface ProfilePageData {
   user: ProfileUserData
   activeAds: ProfileAdItem[]
   historyAds: ProfileAdItem[]
-  acquiredItems: ProfileAdItem[]
+  acquiredItems: CardAdItem[]
+  courses: CourseOption[]
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { DEFAULT_EXPIRATION_MONTHS } from "@/lib/item-status";
 import type { EstadoConservacao, TipoTransacao } from "@prisma/client";
 
 export async function GET() {
@@ -141,6 +142,12 @@ export async function POST(req: Request) {
       return new NextResponse("Categoria inválida.", { status: 400 });
     }
 
+    const publishedAt = new Date();
+    const expirationDate = new Date(publishedAt);
+    expirationDate.setMonth(
+      expirationDate.getMonth() + DEFAULT_EXPIRATION_MONTHS,
+    );
+
     const item = await prisma.$transaction(async (tx) => {
       const createdItem = await tx.item.create({
         data: {
@@ -154,6 +161,8 @@ export async function POST(req: Request) {
           usuario_id: session.usuario_id,
           categoria_id: categoria.id,
           quantidade_disponivel: quantidadeNormalizada,
+          publicado_em: publishedAt,
+          expira_em: expirationDate,
         },
         select: { id: true },
       });

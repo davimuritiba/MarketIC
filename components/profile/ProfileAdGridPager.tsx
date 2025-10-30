@@ -4,32 +4,46 @@ import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { MoreVertical } from "lucide-react"
 
-import { AdGridPager, type AdItem } from "@/components/AdCard"
+import { AdGridPager } from "@/components/AdCard"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from "@/components/ui/dialog"
 
+import type { ProfileAdItem } from "@/types/profile"
+
 interface ProfileAdGridPagerProps {
-  items: AdItem[]
+  items: ProfileAdItem[]
   maxPerPage: number
   gridClass: string
+  showStatusActions?: boolean
+  onItemDelete?: (itemId: string) => void
+  onItemStatusChange?: (item: ProfileAdItem) => void
 }
 
 export function ProfileAdGridPager({
   items,
   maxPerPage,
   gridClass,
+  showStatusActions = false,
+  onItemDelete,
+  onItemStatusChange,
 }: ProfileAdGridPagerProps) {
   const router = useRouter()
   const [localItems, setLocalItems] = useState(items)
-  const [deleteTarget, setDeleteTarget] = useState<AdItem | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ProfileAdItem | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [statusTarget, setStatusTarget] = useState<
+    | { item: ProfileAdItem; status: "INATIVO" | "FINALIZADO" }
+    | null
+  >(null)
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+  const [statusError, setStatusError] = useState<string | null>(null)
 
   useEffect(() => {
     setLocalItems(items)
   }, [items])
 
-  const handleEdit = (item: AdItem) => {
+  const handleEdit = (item: ProfileAdItem) => {
     router.push(`/anunciar/${item.id}/editar`)
   }
 
@@ -60,7 +74,9 @@ export function ProfileAdGridPager({
       }
 
       setLocalItems((prev) => prev.filter((item) => item.id !== deleteTarget.id))
+      onItemDelete?.(deleteTarget.id)
       setDeleteTarget(null)
+      router.refresh()
     } catch (error) {
       setDeleteError(
         error instanceof Error
@@ -72,12 +88,70 @@ export function ProfileAdGridPager({
     }
   }
 
-  const renderActions = (item: AdItem) => (
+  const handleConfirmStatusChange = async () => {
+    if (!statusTarget) return
+
+    try {
+      setIsUpdatingStatus(true)
+      setStatusError(null)
+      const response = await fetch(`/api/items/${statusTarget.item.id}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: statusTarget.status }),
+      })
+
+      if (!response.ok) {
+        let message = "Não foi possível atualizar o status do anúncio."
+        try {
+          const data = await response.json()
+          if (typeof data?.error === "string" && data.error.trim()) {
+            message = data.error
+          }
+        } catch (error) {
+          const text = await response.text()
+          if (text.trim()) {
+            message = text
+          }
+        }
+        throw new Error(message)
+      }
+
+      const updatedItem = (await response.json()) as ProfileAdItem
+      setLocalItems((prev) =>
+        prev.filter((item) => item.id !== statusTarget.item.id),
+      )
+      onItemStatusChange?.(updatedItem)
+      setStatusTarget(null)
+      router.refresh()
+    } catch (error) {
+      setStatusError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível atualizar o status do anúncio.",
+      )
+    } finally {
+      setIsUpdatingStatus(false)
+    }
+  }
+
+  const renderActions = (item: ProfileAdItem) => (
     <AdCardActionMenu
+      item={item}
+      showStatusActions={showStatusActions}
       onEdit={() => handleEdit(item)}
       onDelete={() => {
         setDeleteError(null)
         setDeleteTarget(item)
+      }}
+      onFinalize={() => {
+        setStatusError(null)
+        setStatusTarget({ item, status: "FINALIZADO" })
+      }}
+      onDeactivate={() => {
+        setStatusError(null)
+        setStatusTarget({ item, status: "INATIVO" })
       }}
     />
   )
@@ -88,7 +162,7 @@ export function ProfileAdGridPager({
         items={localItems}
         maxPerPage={maxPerPage}
         gridClass={gridClass}
-        renderActions={renderActions}
+        renderActions={(item) => renderActions(item as ProfileAdItem)}
       />
 
       <Dialog
@@ -139,16 +213,83 @@ export function ProfileAdGridPager({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog
+        open={Boolean(statusTarget)}
+        onOpenChange={(open) => {
+          if (!open && !isUpdatingStatus) {
+            setStatusError(null)
+            setStatusTarget(null)
+          }
+        }}
+      >
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>
+              {statusTarget?.status === "FINALIZADO"
+                ? "Finalizar anúncio"
+                : "Inativar anúncio"}
+            </DialogTitle>
+            <DialogDescription>
+              {statusTarget?.status === "FINALIZADO"
+                ? "Ao finalizar, o anúncio será marcado como concluído e ficará disponível apenas no histórico."
+                : "Ao inativar, o anúncio deixará de ser exibido nas listas de ativos até que seja reativado."}
+            </DialogDescription>
+          </DialogHeader>
+          {statusError && (
+            <p className="text-sm text-red-500">{statusError}</p>
+          )}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="cursor-pointer"
+              onClick={() => {
+                if (!isUpdatingStatus) {
+                  setStatusError(null)
+                  setStatusTarget(null)
+                }
+              }}
+              disabled={isUpdatingStatus}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              className="bg-[#1500FF] hover:bg-[#1200d6] cursor-pointer"
+              onClick={handleConfirmStatusChange}
+              disabled={isUpdatingStatus}
+            >
+              {isUpdatingStatus
+                ? "Atualizando..."
+                : statusTarget?.status === "FINALIZADO"
+                ? "Finalizar"
+                : "Inativar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
 
 interface AdCardActionMenuProps {
+  item: ProfileAdItem
+  showStatusActions: boolean
   onEdit: () => void
   onDelete: () => void
+  onFinalize: () => void
+  onDeactivate: () => void
 }
 
-function AdCardActionMenu({ onEdit, onDelete }: AdCardActionMenuProps) {
+function AdCardActionMenu({
+  item,
+  showStatusActions,
+  onEdit,
+  onDelete,
+  onFinalize,
+  onDeactivate,
+}: AdCardActionMenuProps) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
 
@@ -198,6 +339,35 @@ function AdCardActionMenu({ onEdit, onDelete }: AdCardActionMenuProps) {
       </button>
       {open ? (
         <div className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-md border bg-white py-1 text-sm shadow-lg">
+          {showStatusActions && item.statusCode === "PUBLICADO" ? (
+            <>
+              <button
+                type="button"
+                className="block w-full px-3 py-2 text-left transition hover:bg-muted cursor-pointer"
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setOpen(false)
+                  onDeactivate()
+                }}
+              >
+                Inativar anúncio
+              </button>
+              <button
+                type="button"
+                className="block w-full px-3 py-2 text-left transition hover:bg-muted cursor-pointer"
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setOpen(false)
+                  onFinalize()
+                }}
+              >
+                Finalizar anúncio
+              </button>
+              <div className="my-1 h-px bg-neutral-200" />
+            </>
+          ) : null}
           <button
             type="button"
             className="block w-full px-3 py-2 text-left transition hover:bg-muted cursor-pointer"
