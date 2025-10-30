@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 import ProdutoPageClient, {
@@ -20,12 +21,23 @@ export default async function ProdutoPage({
 }: {
   params: { id: string };
 }) {
+  const session = await getSession();
+
   const item = await prisma.item.findUnique({
     where: { id: params.id },
     include: {
       categoria: true,
       imagens: {
         orderBy: { ordem: "asc" },
+      },
+      usuario: {
+        select: {
+          id: true,
+          nome: true,
+          foto_documento_url: true,
+          reputacao_media: true,
+          reputacao_count: true,
+        },
       },
     },
   });
@@ -42,6 +54,19 @@ export default async function ProdutoPage({
         : null)
     : null;
 
+  const viewerUserId = session?.usuario_id ?? null;
+  const favoriteRecord = viewerUserId
+    ? await prisma.favorito.findUnique({
+        where: {
+          usuario_id_anuncio_id: {
+            usuario_id: viewerUserId,
+            anuncio_id: item.id,
+          },
+        },
+        select: { id: true },
+      })
+    : null;
+
   const product: ProductData = {
     id: item.id,
     title: item.titulo,
@@ -56,6 +81,16 @@ export default async function ProdutoPage({
       url: image.url,
     })),
     categoryName: item.categoria?.nome ?? null,
+    seller: {
+      id: item.usuario.id,
+      name: item.usuario.nome,
+      avatarUrl: item.usuario.foto_documento_url ?? null,
+      rating: item.usuario.reputacao_media ?? 0,
+      ratingCount: item.usuario.reputacao_count ?? 0,
+    },
+    isFavorited: Boolean(favoriteRecord),
+    viewerCanFavorite:
+      Boolean(viewerUserId) && item.usuario_id !== viewerUserId,
   };
 
   return <ProdutoPageClient product={product} />;
