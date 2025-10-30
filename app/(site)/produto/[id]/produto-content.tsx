@@ -422,10 +422,31 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
         <div>
           <h3 className="text-2xl font-semibold">Informações Adicionais</h3>
           <p className="text-base text-muted-foreground">
+            {product.title
+              ? `Título: ${product.title}`
+              : "\"Não possui título\""}
+          </p>
+          <p className="text-base text-muted-foreground">
+            {product.quantity
+              ? `Quantidade de itens: ${product.quantity}`
+              : "\"Não possui título\""}
+          </p>
+          <p className="text-base text-muted-foreground">
             {product.categoryName
               ? `Categoria: ${product.categoryName}`
-              : "\"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\""}
+              : "\"Não possui categoria\""}
           </p>
+          <p className="text-base text-muted-foreground">
+            {product.condition
+              ? `Estado de conservação: ${product.condition}`
+              : "\"Não possui categoria\""}
+          </p>
+          <p className="text-base text-muted-foreground">
+            {product.transactionType
+              ? `Tipo de transação: ${product.transactionType}`
+              : "\"Não possui categoria\""}
+          </p>
+
         </div>
         <div>
           <h3 className="text-2xl font-semibold flex items-center gap-2">
