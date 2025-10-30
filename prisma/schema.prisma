@@ -49,6 +49,11 @@ model Item {
   preco_centavos        Int?
   preco_formatado       String?
   created_at            DateTime          @default(now())
+  status                StatusAnuncio     @default(PUBLICADO)
+  publicado_em          DateTime          @default(now())
+  inativado_em          DateTime?
+  finalizado_em         DateTime?
+  expira_em             DateTime?
   avaliacoes            AvaliacaoItem[]
   carrinhos             CarrinhoItem[]
   favoritos             Favorito[]
@@ -144,4 +149,11 @@ enum StatusInteresse {
   PENDENTE
   ACEITO
   RECUSADO
+}
+
+enum StatusAnuncio {
+  PUBLICADO
+  INATIVO
+  FINALIZADO
+  EXPIRADO
 }
