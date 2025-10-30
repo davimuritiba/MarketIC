@@ -44,6 +44,9 @@ export interface ProductData {
   viewerCanReview: boolean;
   viewerHasReview: boolean;
   viewerIsOwner: boolean;
+  isInCart: boolean;
+  viewerCanAddToCart: boolean;
+  viewerIsAuthenticated: boolean;
 }
 
 export interface ProductReview {
@@ -92,14 +95,18 @@ const conditionLabels: Record<ConditionType, string> = {
 
 export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
   const [interested, setInterested] = useState(false);
-  const [inCart, setInCart] = useState(false);
+  const [inCart, setInCart] = useState(product.isInCart);
   const [favorited, setFavorited] = useState(product.isFavorited);
   const [favoriteError, setFavoriteError] = useState<string | null>(null);
+  const [cartError, setCartError] = useState<string | null>(null);
   const [isTogglingFavorite, startToggleFavorite] = useTransition();
+  const [isUpdatingCart, startUpdateCart] = useTransition();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [reviews, setReviews] = useState<ProductReview[]>(product.reviews);
   const [canReview, setCanReview] = useState(product.viewerCanReview);
-  const [hasSubmittedReview, setHasSubmittedReview] = useState( product.viewerHasReview );
+  const [hasSubmittedReview, setHasSubmittedReview] = useState(
+    product.viewerHasReview,
+  );
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [reviewTitle, setReviewTitle] = useState("");
@@ -182,6 +189,89 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
       } catch (error) {
         console.error("Erro ao alternar favorito", error);
         setFavoriteError("Erro inesperado ao alternar favorito. Tente novamente.");
+      }
+    });
+  };
+
+  const handleAddToCart = () => {
+    if (isUpdatingCart || inCart) {
+      return;
+    }
+
+    startUpdateCart(async () => {
+      try {
+        setCartError(null);
+
+        if (!product.viewerIsAuthenticated) {
+          setCartError("É necessário estar logado para gerenciar o carrinho.");
+          return;
+        }
+
+        if (product.viewerIsOwner || !product.viewerCanAddToCart) {
+          setCartError("Você não pode adicionar o próprio anúncio ao carrinho.");
+          return;
+        }
+
+        const response = await fetch(`/api/items/${product.id}/cart`, {
+          method: "POST",
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            setCartError("É necessário estar logado para gerenciar o carrinho.");
+            return;
+          }
+
+          const payload = await response.json().catch(() => null);
+          const message = payload?.error ?? "Não foi possível adicionar o item ao carrinho.";
+          setCartError(message);
+          return;
+        }
+
+        const payload = await response.json().catch(() => null);
+        const nextState = payload?.inCart ?? true;
+        setInCart(Boolean(nextState));
+      } catch (error) {
+        console.error("Erro ao adicionar item ao carrinho", error);
+        setCartError("Erro inesperado ao adicionar item ao carrinho. Tente novamente.");
+      }
+    });
+  };
+
+  const handleRemoveFromCart = () => {
+    if (isUpdatingCart || !inCart) {
+      return;
+    }
+
+    startUpdateCart(async () => {
+      try {
+        setCartError(null);
+
+        if (!product.viewerIsAuthenticated) {
+          setCartError("É necessário estar logado para gerenciar o carrinho.");
+          return;
+        }
+
+        const response = await fetch(`/api/items/${product.id}/cart`, {
+          method: "DELETE",
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            setCartError("É necessário estar logado para gerenciar o carrinho.");
+            return;
+          }
+
+          const payload = await response.json().catch(() => null);
+          const message = payload?.error ?? "Não foi possível remover o item do carrinho.";
+          setCartError(message);
+          return;
+        }
+
+        setInCart(false);
+      } catch (error) {
+        console.error("Erro ao remover item do carrinho", error);
+        setCartError("Erro inesperado ao remover item do carrinho. Tente novamente.");
       }
     });
   };
@@ -372,7 +462,7 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
               <button
                 aria-label="Adicionar aos favoritos"
                 type="button"
-                className={`hover:text-red-500 cursor-pointer ${
+                className={`hover:text-red-500 ${
                   favorited ? "text-red-500" : "text-gray-400"
                 } ${isTogglingFavorite ? "opacity-60" : ""}`}
                 onClick={handleToggleFavorite}
@@ -388,6 +478,7 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
           {favoriteError ? (
             <p className="text-sm text-red-600">{favoriteError}</p>
           ) : null}
+          {cartError ? <p className="text-sm text-red-600">{cartError}</p> : null}
           <p className="text-sm text-muted-foreground -mt-3">
             {product.quantity} itens
           </p>
@@ -403,15 +494,34 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
               className="cursor-pointer flex-1 bg-[#1500FF] hover:bg-[#1200d6]"
               onClick={() => setInterested((prev) => !prev)}
             >
-              {interested ? "Interesse demonstrado" : "Mostrar interesse"}
+              {interested ? "Interesse demonstrado" : "Demonstrar interesse"}
             </Button>
-            <Button
-              className="cursor-pointer flex-1 bg-blue-400 hover:bg-blue-500 text-white"
-              disabled={inCart}
-              onClick={() => setInCart(true)}
-            >
-              {inCart ? "Adicionado" : "Adicionar ao carrinho"}
-            </Button>
+            {!inCart ? (
+              <Button
+                className="cursor-pointer flex-1 bg-blue-400 hover:bg-blue-500 text-white"
+                disabled={isUpdatingCart || inCart}
+                onClick={handleAddToCart}
+              >
+                {isUpdatingCart ? "Adicionando..." : "Adicionar ao carrinho"}
+              </Button>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                <Button
+                  className="cursor-default flex-1 bg-blue-400 hover:bg-blue-400 text-white"
+                  disabled
+                >
+                  Adicionado
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={handleRemoveFromCart}
+                  disabled={isUpdatingCart}
+                >
+                  Remover do carrinho
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -422,31 +532,10 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
         <div>
           <h3 className="text-2xl font-semibold">Informações Adicionais</h3>
           <p className="text-base text-muted-foreground">
-            {product.title
-              ? `Título: ${product.title}`
-              : "\"Não possui título\""}
-          </p>
-          <p className="text-base text-muted-foreground">
-            {product.quantity
-              ? `Quantidade de itens: ${product.quantity}`
-              : "\"Não possui título\""}
-          </p>
-          <p className="text-base text-muted-foreground">
             {product.categoryName
               ? `Categoria: ${product.categoryName}`
-              : "\"Não possui categoria\""}
+              : "\"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\""}
           </p>
-          <p className="text-base text-muted-foreground">
-            {product.condition
-              ? `Estado de conservação: ${product.condition}`
-              : "\"Não possui categoria\""}
-          </p>
-          <p className="text-base text-muted-foreground">
-            {product.transactionType
-              ? `Tipo de transação: ${product.transactionType}`
-              : "\"Não possui categoria\""}
-          </p>
-
         </div>
         <div>
           <h3 className="text-2xl font-semibold flex items-center gap-2">
@@ -462,7 +551,7 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
             <Button
               variant="outline"
               size="sm"
-              className="mt-3 cursor-pointer"
+              className="mt-3"
               onClick={() => setIsReviewDialogOpen(true)}
             >
               Avaliar produto
@@ -544,7 +633,7 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
                       key={value}
                       type="button"
                       onClick={() => setSelectedRating(value)}
-                      className={`transition-colors cursor-pointer ${isActive ? "text-yellow-500" : "text-gray-300"}`}
+                      className={`transition-colors ${isActive ? "text-yellow-500" : "text-gray-300"}`}
                       aria-label={`Selecionar nota ${value}`}
                     >
                       <Star size={24} className={isActive ? "fill-current" : ""} />
@@ -585,13 +674,12 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
               <Button
                 type="button"
                 variant="ghost"
-                className="cursor-pointer"
                 onClick={() => handleReviewDialogChange(false)}
                 disabled={isSubmittingReview}
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmittingReview} className="bg-[#1500FF] hover:bg-[#1200d6] cursor-pointer">
+              <Button type="submit" disabled={isSubmittingReview} className="bg-[#1500FF] hover:bg-[#1200d6]">
                 {isSubmittingReview ? "Enviando..." : "Enviar avaliação"}
               </Button>
             </DialogFooter>

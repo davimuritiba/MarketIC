@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Grid2X2, Mail, Plus, ShoppingCart } from "lucide-react";
+import { Grid2X2, Heart, Mail, Plus, ShoppingCart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from "@/components/ui/dialog";
 
@@ -130,11 +130,11 @@ export function HeaderApp({ user }: HeaderAppProps) {
           </Link>
 
           <Link
-            href="/mensagens"
+            href="/favoritos"
             className="flex items-center justify-center rounded-full border border-neutral-300 w-9 h-9 hover:bg-neutral-50"
-            title="Mensagens"
+            title="Favoritos"
           >
-            <Mail size={18} />
+            <Heart size={18} />
           </Link>
 
           <details ref={detailsRef} className="relative z-10">
