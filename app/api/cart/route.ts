@@ -75,6 +75,9 @@ export async function GET() {
 
       const days = item.tipo_transacao === "EMPRESTIMO" ? item.prazo_dias ?? null : null;
 
+      const availableQuantity = Math.max(item.quantidade_disponivel ?? 1);
+      const quantity = Math.min(availableQuantity, entry.quantidade ?? 1); 
+
       return {
         id: item.id,
         titulo: item.titulo,
@@ -84,7 +87,8 @@ export async function GET() {
         preco: price,
         dias: days ?? undefined,
         interested: entry.interested_flag ?? false,
-        quantidade: entry.quantidade ?? 1,
+        quantidade: entry.quantidade,
+        quantidadeDisponivel: availableQuantity,
         rating: item.usuario?.reputacao_media ?? undefined,
         reviews: item.usuario?.reputacao_count ?? undefined,
         imagem: item.imagens?.[0]?.url ?? undefined,

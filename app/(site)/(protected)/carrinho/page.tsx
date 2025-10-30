@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ElementType } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ interface Item {
   dias?: number;
   interested?: boolean;
   quantidade: number;
+  quantidadeDisponivel: number;
   rating?: number;
   reviews?: number;
   imagem?: string;
@@ -30,10 +32,15 @@ const typeConfig: Record<Item["tipo"], { icon: ElementType; color: string }> = {
 function QuantitySelect({
   value,
   onChange,
+  max,
 }: {
   value: number;
   onChange: (value: number) => void;
+  max?: number;
 }) {
+  const maxValue = max ?? Number.POSITIVE_INFINITY;
+  const canIncrement = value < maxValue;
+
   return (
     <div className="flex w-full sm:w-auto items-center border rounded-md">
       <Button
@@ -48,14 +55,25 @@ function QuantitySelect({
         data-testid="quantity-input"
         type="number"
         value={value}
-        onChange={(e) => onChange(Math.max(1, Number(e.target.value)))}
+        min={1}
+        max={Number.isFinite(maxValue) ? maxValue : undefined}
+        onChange={(e) => {
+          const nextValue = Number(e.target.value);
+          if (!Number.isFinite(nextValue)) {
+            onChange(1);
+            return;
+          }
+
+          onChange(Math.min(maxValue, Math.max(1, nextValue)));
+        }}
         className="flex-1 w-full sm:w-12 text-center border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
       />
       <Button
         variant="ghost"
         size="icon"
         className="text-blue-600 hover:text-blue-700 flex-shrink-0"
-        onClick={() => onChange(value + 1)}
+        onClick={() => onChange(Math.min(maxValue, value + 1))}
+        disabled={!canIncrement}
       >
         <Plus className="w-4 h-4" />
       </Button>
@@ -165,9 +183,16 @@ export default function CarrinhoPage() {
 
   const handleQuantityChange = (id: string, quantity: number) => {
     setItems((prev) =>
-      prev.map((i) =>
-        i.id === id ? { ...i, quantidade: Math.max(1, quantity) } : i
-      )
+      prev.map((i) => {
+        if (i.id !== id) {
+          return i;
+        }
+
+        const maxQuantidade = Math.max(1, i.quantidadeDisponivel);
+        const normalized = Math.min(maxQuantidade, Math.max(1, quantity));
+
+        return { ...i, quantidade: normalized };
+      })
     );
   };
 
@@ -215,7 +240,14 @@ export default function CarrinhoPage() {
                 </div>
               </div>
               <div className="flex-1 w-full">
-                <h3 className="text-2xl font-semibold leading-tight">{item.titulo}</h3>
+                <h3 className="text-2xl font-semibold leading-tight">
+                  <Link
+                    href={`/produto/${item.id}`}
+                    className="text-inherit hover:underline cursor-pointer"
+                  >
+                    {item.titulo}
+                  </Link>
+                </h3>
                 <p className="text-lg text-muted-foreground">{item.descricao}</p>
                 <p className="text-xl font-bold mt-2">{item.estado}</p>
                 {item.tipo === "Venda" && item.preco && (
@@ -282,6 +314,7 @@ export default function CarrinhoPage() {
                   <div className="sm:w-40 w-full">
                     <QuantitySelect
                       value={item.quantidade}
+                      max={item.quantidadeDisponivel}
                       onChange={(q) => handleQuantityChange(item.id, q)}
                     />
                   </div>
