@@ -137,6 +137,14 @@ export function HeaderApp({ user }: HeaderAppProps) {
             <Heart size={18} />
           </Link>
 
+          <Link
+            href="/mensagens"
+            className="flex items-center justify-center rounded-full border border-neutral-300 w-9 h-9 hover:bg-neutral-50"
+            title="Mensagens"
+          >
+            <Mail size={18} />
+          </Link>
+
           <details ref={detailsRef} className="relative z-10">
             <summary
               className="flex items-center justify-center rounded-full bg-neutral-200 w-9 h-9 cursor-pointer overflow-hidden [&::-webkit-details-marker]:hidden"

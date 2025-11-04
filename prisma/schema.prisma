@@ -96,6 +96,8 @@ model Interesse {
   created_at DateTime        @default(now())
   item       Item            @relation(fields: [anuncio_id], references: [id])
   usuario    Usuario         @relation(fields: [usuario_id], references: [id])
+
+  @@unique([usuario_id, anuncio_id])
 }
 
 model CarrinhoItem {
