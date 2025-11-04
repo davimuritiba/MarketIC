@@ -47,6 +47,7 @@ export interface ProductData {
   isInCart: boolean;
   viewerCanAddToCart: boolean;
   viewerIsAuthenticated: boolean;
+  viewerHasInterest: boolean;
 }
 
 export interface ProductReview {
@@ -94,13 +95,14 @@ const conditionLabels: Record<ConditionType, string> = {
 };
 
 export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
-  const [interested, setInterested] = useState(false);
+  const [interested, setInterested] = useState(product.viewerHasInterest);
   const [inCart, setInCart] = useState(product.isInCart);
   const [favorited, setFavorited] = useState(product.isFavorited);
   const [favoriteError, setFavoriteError] = useState<string | null>(null);
   const [cartError, setCartError] = useState<string | null>(null);
   const [isTogglingFavorite, startToggleFavorite] = useTransition();
   const [isUpdatingCart, startUpdateCart] = useTransition();
+  const [isTogglingInterest, startToggleInterest] = useTransition();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [reviews, setReviews] = useState<ProductReview[]>(product.reviews);
   const [canReview, setCanReview] = useState(product.viewerCanReview);
@@ -113,6 +115,7 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
   const [reviewComment, setReviewComment] = useState("");
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [isSubmittingReview, startSubmitReview] = useTransition();
+  const [interestError, setInterestError] = useState<string | null>(null);
 
   const stars = useMemo(() => Array.from({ length: 5 }), []);
 
@@ -189,6 +192,58 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
       } catch (error) {
         console.error("Erro ao alternar favorito", error);
         setFavoriteError("Erro inesperado ao alternar favorito. Tente novamente.");
+      }
+    });
+  };
+
+  const handleToggleInterest = () => {
+    if (isTogglingInterest) {
+      return;
+    }
+
+    if (!product.viewerIsAuthenticated) {
+      setInterestError("É necessário estar logado para demonstrar interesse.");
+      return;
+    }
+
+    if (product.viewerIsOwner && !interested) {
+      setInterestError("Você não pode demonstrar interesse no próprio anúncio.");
+      return;
+    }
+
+    const method = interested ? "DELETE" : "POST";
+
+    startToggleInterest(async () => {
+      try {
+        setInterestError(null);
+
+        const response = await fetch(`/api/items/${product.id}/interest`, {
+          method,
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            setInterestError(
+              "Sessão inválida ou expirada. Faça login novamente.",
+            );
+            return;
+          }
+
+          const payload = await response.json().catch(() => null);
+          const message =
+            payload?.error ?? "Não foi possível atualizar o interesse.";
+          setInterestError(message);
+          return;
+        }
+
+        const payload = await response.json().catch(() => null);
+        const nextState = payload?.interested ?? !interested;
+        setInterested(Boolean(nextState));
+      } catch (error) {
+        console.error("Erro ao alternar interesse", error);
+        setInterestError(
+          "Erro inesperado ao atualizar interesse. Tente novamente.",
+        );
       }
     });
   };
@@ -479,6 +534,14 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
             <p className="text-sm text-red-600">{favoriteError}</p>
           ) : null}
           {cartError ? <p className="text-sm text-red-600">{cartError}</p> : null}
+          {interestError ? (
+            <p className="text-sm text-red-600">{interestError}</p>
+          ) : null}
+          {product.viewerIsOwner ? (
+            <p className="text-sm text-muted-foreground">
+              Você não pode demonstrar interesse no próprio anúncio.
+            </p>
+          ) : null}
           <p className="text-sm text-muted-foreground -mt-3">
             {product.quantity} itens
           </p>
@@ -492,9 +555,19 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
               className="cursor-pointer flex-1 bg-[#1500FF] hover:bg-[#1200d6]"
-              onClick={() => setInterested((prev) => !prev)}
+              onClick={handleToggleInterest}
+              disabled={
+                isTogglingInterest ||
+                (product.viewerIsOwner && !interested)
+              }
             >
-              {interested ? "Interesse demonstrado" : "Demonstrar interesse"}
+              {isTogglingInterest
+                ? interested
+                  ? "Cancelando interesse..."
+                  : "Enviando interesse..."
+                : interested
+                  ? "Cancelar interesse"
+                  : "Demonstrar interesse"}
             </Button>
             {!inCart ? (
               <Button

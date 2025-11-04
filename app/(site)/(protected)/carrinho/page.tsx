@@ -87,6 +87,8 @@ export default function CarrinhoPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [interestLoadingId, setInterestLoadingId] = useState<string | null>(null);
+  const [isBulkInterestLoading, setIsBulkInterestLoading] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -171,14 +173,103 @@ export default function CarrinhoPage() {
     }
   };
 
-  const handleInterest = (id: string) => {
-    setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, interested: true } : i))
-    );
+  const handleInterest = async (id: string) => {
+    const currentItem = items.find((item) => item.id === id);
+
+    if (!currentItem || currentItem.interested) {
+      return;
+    }
+
+    setActionError(null);
+    setInterestLoadingId(id);
+
+    try {
+      const response = await fetch(`/api/items/${id}/interest`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Sessão inválida ou expirada. Faça login novamente.");
+        }
+
+        const payload = await response.json().catch(() => null);
+        const message =
+          payload?.error ?? "Não foi possível demonstrar interesse neste item.";
+        throw new Error(message);
+      }
+
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, interested: true } : item,
+        ),
+      );
+    } catch (err) {
+      console.error("Erro ao demonstrar interesse", err);
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : "Erro inesperado ao demonstrar interesse.",
+      );
+    } finally {
+      setInterestLoadingId(null);
+    }
   };
 
-  const handleInterestAll = () => {
-    setItems((prev) => prev.map((i) => ({ ...i, interested: true })));
+  const handleInterestAll = async () => {
+    const targets = items.filter((item) => !item.interested);
+
+    if (targets.length === 0) {
+      return;
+    }
+
+    setActionError(null);
+    setInterestLoadingId(null);
+    setIsBulkInterestLoading(true);
+
+    const successIds: string[] = [];
+
+    try {
+      for (const target of targets) {
+        const response = await fetch(`/api/items/${target.id}/interest`, {
+          method: "POST",
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error(
+              "Sessão inválida ou expirada. Faça login novamente.",
+            );
+          }
+
+          const payload = await response.json().catch(() => null);
+          const message =
+            payload?.error ??
+            "Não foi possível demonstrar interesse em todos os itens.";
+          throw new Error(message);
+        }
+
+        successIds.push(target.id);
+      }
+
+      if (successIds.length > 0) {
+        const successSet = new Set(successIds);
+        setItems((prev) =>
+          prev.map((item) =>
+            successSet.has(item.id) ? { ...item, interested: true } : item,
+          ),
+        );
+      }
+    } catch (err) {
+      console.error("Erro ao demonstrar interesse em todos os itens", err);
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : "Erro inesperado ao demonstrar interesse em todos os itens.",
+      );
+    } finally {
+      setIsBulkInterestLoading(false);
+    }
   };
 
   const handleQuantityChange = (id: string, quantity: number) => {
@@ -216,6 +307,9 @@ export default function CarrinhoPage() {
 
       {items.map((item) => {
         const { icon: Icon, color } = typeConfig[item.tipo];
+        const isItemLoading = interestLoadingId === item.id;
+        const interestDisabled =
+          Boolean(item.interested) || isItemLoading || isBulkInterestLoading;
         return (
           <Card key={item.id} className="bg-white">
             <div className="flex flex-col sm:flex-row gap-4 p-6 items-start">
@@ -331,12 +425,14 @@ export default function CarrinhoPage() {
                 <Button
                   size="lg"
                   className="cursor-pointer w-full sm:w-auto bg-[#1500FF] hover:bg-[#1200d6] text-base"
-                  disabled={item.interested}
+                  disabled={interestDisabled}
                   onClick={() => handleInterest(item.id)}
                 >
-                  {item.interested
-                    ? "Interesse demonstrado"
-                    : "Demonstrar interesse"}
+                  {isItemLoading
+                    ? "Enviando interesse..."
+                    : item.interested
+                      ? "Interesse demonstrado"
+                      : "Demonstrar interesse"}
                 </Button>
               </div>
             </div>
@@ -348,10 +444,12 @@ export default function CarrinhoPage() {
         <div className="pt-4 border-t">
           <Button
             className="cursor-pointer w-full bg-[#1500FF] hover:bg-[#1200d6]"
-            disabled={allInterested}
+            disabled={allInterested || isBulkInterestLoading}
             onClick={handleInterestAll}
           >
-            Demonstrar interesse em todos
+            {isBulkInterestLoading
+              ? "Enviando interesses..."
+              : "Demonstrar interesse em todos"}
           </Button>
         </div>
       )}

@@ -93,6 +93,18 @@ export default async function ProdutoPage({
       })
     : null;
 
+  const interestRecord = viewerUserId
+    ? await prisma.interesse.findUnique({
+        where: {
+          usuario_id_anuncio_id: {
+            usuario_id: viewerUserId,
+            anuncio_id: item.id,
+          },
+        },
+        select: { id: true },
+      })
+    : null;
+
   const productReviews = item.avaliacoes ?? [];
   const productRatingCount = productReviews.length;
   const productRating = productRatingCount
@@ -150,6 +162,7 @@ export default async function ProdutoPage({
     isInCart: Boolean(cartRecord),
     viewerCanAddToCart: Boolean(viewerUserId) && !viewerIsOwner,
     viewerIsAuthenticated: Boolean(viewerUserId),
+    viewerHasInterest: Boolean(interestRecord),
   };
 
   return <ProdutoPageClient product={product} />;
