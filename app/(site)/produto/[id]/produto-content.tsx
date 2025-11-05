@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage, } from "@/components/ui/avatar";
+import { formatBrazilianPhone } from "@/lib/phone";
 
 export type TransactionType = "VENDA" | "EMPRESTIMO" | "DOACAO";
 export type ConditionType = "NOVO" | "SEMINOVO" | "USADO";
@@ -179,7 +180,8 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
       }
 
       if (sharedContact.phone) {
-        parts.push(sharedContact.phone);
+        const formattedPhone = formatBrazilianPhone(sharedContact.phone) ?? sharedContact.phone;
+        parts.push(`Telefone: ${formattedPhone}`);
       }
 
       if (parts.length > 0) {
