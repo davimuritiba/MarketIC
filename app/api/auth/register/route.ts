@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { attachSessionCookie, createSession, hashPassword } from "@/lib/auth";
+import { isValidBrazilianPhone, normalizeBrazilianPhone } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 
 function sanitizeCPF(value: string) {
@@ -123,8 +124,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "RG é obrigatório." }, { status: 400 });
   }
 
-  if (!telefone || !telefone.trim()) {
+  if (!telefone || typeof telefone !== "string" || !telefone.trim()) {
     return NextResponse.json({ error: "Telefone é obrigatório." }, { status: 400 });
+  }
+
+  const normalizedPhone = normalizeBrazilianPhone(telefone);
+
+  if (!isValidBrazilianPhone(normalizedPhone)) {
+    return NextResponse.json(
+      {
+        error:
+          "Informe um telefone válido com DDD e 9 dígitos (ex: (82) 90000-0000).",
+      },
+      { status: 400 },
+    );
   }
 
   if (!dataNascimento || Number.isNaN(Date.parse(dataNascimento))) {
@@ -204,7 +217,7 @@ export async function POST(request: Request) {
       senha: passwordHash,
       CPF: normalizedCpf,
       RG: rg.trim(),
-      telefone: telefone.trim(),
+      telefone: normalizedPhone,
       data_nascimento: new Date(dataNascimento),
       curso: curso.trim(),
       foto_documento_url: trimmedFotoDocumentoUrl,

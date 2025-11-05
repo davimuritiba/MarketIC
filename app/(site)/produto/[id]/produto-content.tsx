@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage, } from "@/components/ui/avatar";
 
 export type TransactionType = "VENDA" | "EMPRESTIMO" | "DOACAO";
 export type ConditionType = "NOVO" | "SEMINOVO" | "USADO";
+export type InterestStatus = "PENDENTE" | "ACEITO" | "RECUSADO";
 
 interface ProductImage {
   id: string;
@@ -48,6 +49,11 @@ export interface ProductData {
   viewerCanAddToCart: boolean;
   viewerIsAuthenticated: boolean;
   viewerHasInterest: boolean;
+  viewerInterestStatus?: InterestStatus | null;
+  viewerSharedContact?: {
+    email?: string | null;
+    phone?: string | null;
+  } | null;
 }
 
 export interface ProductReview {
@@ -116,6 +122,12 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [isSubmittingReview, startSubmitReview] = useTransition();
   const [interestError, setInterestError] = useState<string | null>(null);
+  const [interestStatus, setInterestStatus] = useState<InterestStatus | null>(
+    product.viewerInterestStatus ?? null,
+  );
+  const [sharedContact, setSharedContact] = useState<
+    ProductData["viewerSharedContact"]
+  >(product.viewerSharedContact ?? null);
 
   const stars = useMemo(() => Array.from({ length: 5 }), []);
 
@@ -154,7 +166,29 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
   const productRating = productReviewStats.average;
   const productReviewCount = reviews.length;
 
-  const description = product.description?.trim() ? product.description : "Descrição não disponível.";
+  const description = product.description?.trim()
+    ? product.description
+    : "Descrição não disponível.";
+
+  const contactDisplay = useMemo(() => {
+    if (interestStatus === "ACEITO" && sharedContact) {
+      const parts: string[] = [];
+
+      if (sharedContact.email) {
+        parts.push(sharedContact.email);
+      }
+
+      if (sharedContact.phone) {
+        parts.push(sharedContact.phone);
+      }
+
+      if (parts.length > 0) {
+        return parts.join(" | ");
+      }
+    }
+
+    return "XXXXX";
+  }, [interestStatus, sharedContact]);
 
   const handleToggleFavorite = () => {
     if (isTogglingFavorite) {
@@ -239,6 +273,8 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
         const payload = await response.json().catch(() => null);
         const nextState = payload?.interested ?? !interested;
         setInterested(Boolean(nextState));
+        setInterestStatus(payload?.status ?? null);
+        setSharedContact(null);
       } catch (error) {
         console.error("Erro ao alternar interesse", error);
         setInterestError(
@@ -596,6 +632,13 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
               </div>
             )}
           </div>
+          <p className="mt-20 text-m font-medium text-neutral-700">
+            Contato do anunciante: {contactDisplay}
+          </p>
+          <p className="text-m font-medium text-neutral-500">
+            Demonstre interesse e espere ser aceito para visualizar o contato
+          </p>
+          
         </div>
       </section>
 

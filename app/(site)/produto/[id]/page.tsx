@@ -37,6 +37,8 @@ export default async function ProdutoPage({
           foto_documento_url: true,
           reputacao_media: true,
           reputacao_count: true,
+          email_institucional: true,
+          telefone: true,
         },
       },
       avaliacoes: {
@@ -101,7 +103,12 @@ export default async function ProdutoPage({
             anuncio_id: item.id,
           },
         },
-        select: { id: true },
+        select: {
+          id: true,
+          status: true,
+          share_email: true,
+          share_phone: true,
+        },
       })
     : null;
 
@@ -163,6 +170,23 @@ export default async function ProdutoPage({
     viewerCanAddToCart: Boolean(viewerUserId) && !viewerIsOwner,
     viewerIsAuthenticated: Boolean(viewerUserId),
     viewerHasInterest: Boolean(interestRecord),
+    viewerInterestStatus: interestRecord?.status ?? null,
+    viewerSharedContact: (() => {
+      if (
+        !interestRecord ||
+        interestRecord.status !== "ACEITO" ||
+        (!interestRecord.share_email && !interestRecord.share_phone)
+      ) {
+        return null;
+      }
+
+      return {
+        email: interestRecord.share_email
+          ? item.usuario.email_institucional
+          : null,
+        phone: interestRecord.share_phone ? item.usuario.telefone : null,
+      };
+    })(),
   };
 
   return <ProdutoPageClient product={product} />;

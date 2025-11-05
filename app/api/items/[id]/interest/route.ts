@@ -51,17 +51,28 @@ export async function POST(
         anuncio_id: anuncioId,
       },
     },
-    select: { id: true },
+    select: {
+      id: true,
+      status: true,
+      share_email: true,
+      share_phone: true,
+    },
   });
 
-  if (!existingInterest) {
-    await prisma.interesse.create({
-      data: {
-        usuario_id: session.usuario_id,
-        anuncio_id: anuncioId,
-      },
-    });
-  }
+  const interest = existingInterest
+    ? existingInterest
+    : await prisma.interesse.create({
+        data: {
+          usuario_id: session.usuario_id,
+          anuncio_id: anuncioId,
+        },
+        select: {
+          id: true,
+          status: true,
+          share_email: true,
+          share_phone: true,
+        },
+      });
 
   await prisma.carrinhoItem
     .update({
@@ -75,7 +86,15 @@ export async function POST(
     })
     .catch(() => null);
 
-  return NextResponse.json({ interested: true }, { status: 200 });
+  return NextResponse.json(
+    {
+      interested: true,
+      status: interest.status,
+      shareEmail: interest.share_email,
+      sharePhone: interest.share_phone,
+    },
+    { status: 200 },
+  );
 }
 
 export async function DELETE(
@@ -133,5 +152,5 @@ export async function DELETE(
     })
     .catch(() => null);
 
-  return NextResponse.json({ interested: false }, { status: 200 });
+  return NextResponse.json({ interested: false, status: null }, { status: 200 });
 }

@@ -93,6 +93,8 @@ model Interesse {
   anuncio_id String          @db.Uuid
   quantidade Int             @default(1)
   status     StatusInteresse @default(PENDENTE)
+  share_email Boolean        @default(false)
+  share_phone Boolean        @default(false)
   created_at DateTime        @default(now())
   item       Item            @relation(fields: [anuncio_id], references: [id])
   usuario    Usuario         @relation(fields: [usuario_id], references: [id])

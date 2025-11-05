@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import { isValidBrazilianPhone, normalizeBrazilianPhone } from "@/lib/phone";
 
 const DEFAULT_COURSES = [
   { value: "cc", label: "Ciência da Computação" },
@@ -69,6 +70,24 @@ const formatCpf = (value: string) => {
   }
 
   return formatted;
+};
+
+const formatPhoneInput = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+
+  if (digits.length === 0) {
+    return "";
+  }
+
+  if (digits.length <= 2) {
+    return `(${digits}`;
+  }
+
+  if (digits.length <= 7) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  }
+
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 };
 
 export default function CadastroPage() {
@@ -188,6 +207,16 @@ export default function CadastroPage() {
         return;
       }
 
+      const normalizedPhone = normalizeBrazilianPhone(telefone);
+
+      if (!isValidBrazilianPhone(normalizedPhone)) {
+        setErrorMessage(
+          "Informe um telefone válido com DDD e 9 dígitos (ex: (82) 90000-0000).",
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
       if (!fotoDocumento) {
         setErrorMessage("Adicione uma foto do documento.");
         setIsSubmitting(false);
@@ -202,7 +231,7 @@ export default function CadastroPage() {
         emailInstitucional,
         cpf,
         rg,
-        telefone,
+        telefone: normalizedPhone,
         dataNascimento,
         curso,
       });
@@ -218,7 +247,7 @@ export default function CadastroPage() {
           senha,
           cpf: sanitizedCpf,
           rg,
-          telefone,
+          telefone: normalizedPhone,
           dataNascimento,
           curso,
           fotoDocumentoUrl: fotoDocumentoBase64,
@@ -249,6 +278,10 @@ export default function CadastroPage() {
 
   const handleCpfChange = (event: ChangeEvent<HTMLInputElement>) => {
     setCpf(formatCpf(event.target.value));
+  };
+
+  const handleTelefoneChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setTelefone(formatPhoneInput(event.target.value));
   };
 
   return (
@@ -353,7 +386,8 @@ export default function CadastroPage() {
                   placeholder="(82) 90000-0000"
                   className="h-10 bg-neutral-100"
                   value={telefone}
-                  onChange={(event) => setTelefone(event.target.value)}
+                  onChange={handleTelefoneChange}
+                  inputMode="numeric"
                   required
                 />
               </div>

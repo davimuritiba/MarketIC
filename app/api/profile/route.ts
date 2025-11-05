@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { clearSessionCookie, getUserFromRequest } from "@/lib/auth";
+import { isValidBrazilianPhone, normalizeBrazilianPhone } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 import { getProfilePageData } from "@/lib/profile";
 
@@ -65,10 +66,37 @@ export async function PUT(request: NextRequest) {
   }
 
   if (telefone !== undefined) {
-    if (telefone !== null && !telefone.trim()) {
-      return NextResponse.json({ error: "Telefone não pode ser vazio." }, { status: 400 });
+    if (telefone === null) {
+      dataToUpdate.telefone = null;
+    } else if (typeof telefone !== "string") {
+      return NextResponse.json(
+        { error: "Telefone inválido." },
+        { status: 400 },
+      );
+    } else {
+      const trimmedPhone = telefone.trim();
+
+      if (!trimmedPhone) {
+        return NextResponse.json(
+          { error: "Telefone não pode ser vazio." },
+          { status: 400 },
+        );
+      }
+
+      const normalizedPhone = normalizeBrazilianPhone(trimmedPhone);
+
+      if (!isValidBrazilianPhone(normalizedPhone)) {
+        return NextResponse.json(
+          {
+            error:
+              "Informe um telefone válido com DDD e 9 dígitos (ex: (82) 90000-0000).",
+          },
+          { status: 400 },
+        );
+      }
+
+      dataToUpdate.telefone = normalizedPhone;
     }
-    dataToUpdate.telefone = telefone?.trim() ?? null;
   }
 
   if (curso !== undefined) {

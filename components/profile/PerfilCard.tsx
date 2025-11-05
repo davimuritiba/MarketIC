@@ -13,6 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "
 import { Calendar, GraduationCap, IdCard, Mail, Phone, Star } from "lucide-react";
 
 import { resolveCourseLabel } from "@/lib/course-labels";
+import {
+  formatBrazilianPhone,
+  normalizeBrazilianPhone,
+} from "@/lib/phone";
 
 export interface CourseOption {
   value: string;
@@ -68,15 +72,6 @@ function formatRg(rg: string | null) {
   const digits = rg.replace(/\D/g, "");
   if (digits.length < 8) return rg;
   return digits.replace(/(\d{2})(\d{3})(\d{3})([\dXx]{1,2})/, "$1.$2.$3-$4");
-}
-
-function formatPhone(phone: string | null) {
-  if (!phone) return "Telefone não informado";
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length < 10) return phone;
-  const match = digits.match(/(\d{2})(\d{4,5})(\d{4})/);
-  if (!match) return phone;
-  return `(${match[1]}) ${match[2]}-${match[3]}`;
 }
 
 function getInitials(name?: string | null) {
@@ -248,7 +243,9 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
         },
         body: JSON.stringify({
           nome: formState.nome.trim(),
-          telefone: formState.telefone.trim() || null,
+          telefone: formState.telefone.trim()
+            ? normalizeBrazilianPhone(formState.telefone)
+            : null,
           curso: formState.curso.trim() || null,
           rg: formState.rg.trim(),
           fotoDocumentoUrl: fotoDocumentoUrlToSend,
@@ -580,7 +577,9 @@ export default function ProfileCard({ user, courses }: ProfileCardProps) {
               <Mail size={20} /> {currentUser.emailInstitucional}
             </li>
             <li className="text-base flex items-center gap-2">
-              <Phone size={20} /> {formatPhone(currentUser.telefone)}
+              <Phone size={20} />
+              {formatBrazilianPhone(currentUser.telefone) ??
+                "Telefone não informado"}
             </li>
             <li className="text-base flex items-center gap-2">
               <Calendar size={20} /> {formatDate(currentUser.dataNascimento)}
