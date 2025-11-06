@@ -3,19 +3,31 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { DEFAULT_EXPIRATION_MONTHS } from "@/lib/item-status";
 import type { EstadoConservacao, TipoTransacao } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const q = searchParams.get("q")?.trim() ?? "";
+
+    const where = q
+      ? {
+          OR: [
+            { titulo: { contains: q, mode: "insensitive" as const } },
+            { descricao: { contains: q, mode: "insensitive" as const } },
+          ],
+        }
+      : {};
+
     const items = await prisma.item.findMany({
+      where,
       include: {
         categoria: true,
-        usuario: {
-          select: { id: true, nome: true, email_institucional: true },
-        },
+        usuario: { select: { id: true, nome: true, email_institucional: true } },
       },
       orderBy: { titulo: "asc" },
     });
-
+    
     return NextResponse.json(items);
   } catch (error) {
     console.error("Erro ao listar itens:", error);

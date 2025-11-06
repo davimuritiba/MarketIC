@@ -8,14 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Star, ImageIcon, ShoppingBag, Repeat2, Gift } from "lucide-react";
+import Link from "next/link";
 
 /* ---------- (substituir por fetch no back depois) ---------- */
 type Produto = {
   id: string;
   titulo: string;
   descricao: string;
-  tipo: "Venda" | "Empréstimo" | "Doação" | "Aluguel";
-  estado: "Novo" | "Seminovo" | "Usado";
+  tipo_transacao: "VENDA" | "EMPRESTIMO" | "DOACAO" | "ALUGUEL";
+  estado_conservacao: "Novo" | "Seminovo" | "Usado";
   preco?: number;     // Venda/Aluguel
   prazoDias?: number; // Empréstimo
   avaliacoes?: number;
@@ -23,26 +24,20 @@ type Produto = {
   categoria: string;
 };
 
-const PRODUTOS: Produto[] = [
-  { id: "1", titulo: "Livro X", descricao: "Livro focado no aprendizado de x", tipo: "Venda", estado: "Novo", preco: 60, avaliacoes: 4, rating: 4.0, categoria: "Livros" },
-  { id: "2", titulo: "Livro XY", descricao: "Livro focado no aprendizado de xy", tipo: "Empréstimo", estado: "Seminovo", prazoDias: 15, avaliacoes: 17, rating: 5.0, categoria: "Livros" },
-  { id: "3", titulo: "Livro Z", descricao: "Livro focado no aprendizado de z", tipo: "Doação", estado: "Usado", avaliacoes: 9, rating: 4.5, categoria: "Livros" },
-  { id: "4", titulo: "Livro X", descricao: "Outra edição do Livro X", tipo: "Venda", estado: "Usado", preco: 269.99, avaliacoes: 163, rating: 3.8, categoria: "Livros" },
-];
-
 /* ---------- helpers ---------- */
-const tipoColor: Record<Produto["tipo"], string> = {
-  "Venda": "text-red-600",
-  "Empréstimo": "text-green-700",
-  "Doação": "text-indigo-700",
-  "Aluguel": "text-amber-700",
+const tipoColor: Record<Produto["tipo_transacao"], string> = {
+  "VENDA": "text-red-600",
+  "EMPRESTIMO": "text-green-700",
+  "DOACAO": "text-indigo-700",
+  "ALUGUEL": "text-amber-700",
 };
-type AdType = "Venda" | "Empréstimo" | "Doação" ;
+type AdType = "VENDA" | "EMPRESTIMO" | "DOACAO" | "ALUGUEL";
 
 const typeConfig: Record<AdType, { icon: ElementType; color: string }> = {
-  Venda: { icon: ShoppingBag, color: "#EC221F" },
-  "Empréstimo": { icon: Repeat2, color: "#0A5C0A" },
-  Doação: { icon: Gift, color: "#0B0B64" },
+  VENDA: { icon: ShoppingBag, color: "#EC221F" },
+  EMPRESTIMO: { icon: Repeat2, color: "#0A5C0A" },
+  DOACAO: { icon: Gift, color: "#0B0B64" },
+  ALUGUEL: { icon: ImageIcon, color: "#A65E2E" },
 };
 
 
@@ -52,6 +47,9 @@ const fmtPreco = (v?: number) => (typeof v === "number" ? v.toLocaleString("pt-B
 export default function BuscarPage() {
   const sp = useSearchParams();
   const router = useRouter();
+
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [loading, setLoading] = useState(false);
 
   // query inicial vinda do header (?q=)
   const q = sp.get("q")?.toString() ?? "";
@@ -77,29 +75,28 @@ export default function BuscarPage() {
     router.replace(`/buscar?${params.toString()}`);
   }, [query, tipo, estado, preco, page]);
 
-  const results = useMemo(() => {
-    // texto (titulo/descrição/categoria)
-    let arr = PRODUTOS.filter(p => {
-      if (!query.trim()) return true;
-      const text = `${p.titulo} ${p.descricao} ${p.categoria}`.toLowerCase();
-      return text.includes(query.toLowerCase());
-    });
-
-    // filtros
-    if (tipo) arr = arr.filter(p => p.tipo === tipo);
-    if (estado) arr = arr.filter(p => p.estado === estado);
-
-    if (preco) {
-      if (preco === "0-50") arr = arr.filter(p => (p.preco ?? Infinity) >= 0 && (p.preco ?? Infinity) <= 50);
-      if (preco === "50-100") arr = arr.filter(p => (p.preco ?? Infinity) > 50 && (p.preco ?? Infinity) <= 100);
-      if (preco === "100+") arr = arr.filter(p => (p.preco ?? 0) > 100);
+  useEffect(() => {
+    async function fetchProdutos() {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/items?q=${encodeURIComponent(query)}&page=${page}`);
+        if(!res.ok) throw new Error('Erro ao buscar produtos');
+        const data = await res.json();
+        console.log("DADOS RECEBIDOS DA API:", data);
+        setProdutos(data);
+      } catch (error) {
+        console.error("Erro ao carregar produtos:",error);
+        setProdutos([]);
+      } finally {
+        setLoading(false);
+      }
     }
 
-    return arr;
-  }, [query, tipo, estado, preco]);
+    if (query != undefined) fetchProdutos();
+  }, [query, page]);
 
-  const totalPages = Math.max(1, Math.ceil(results.length / pageSize));
-  const paginated = results.slice((page - 1) * pageSize, page * pageSize);
+  const totalPages = 1
+  const paginated = produtos;
 
   // reset página ao mudar filtros
   useEffect(() => { setPage(1); }, [query, tipo, estado, preco]);
@@ -165,12 +162,14 @@ export default function BuscarPage() {
 
       {/* listagem */}
       <div className="mt-6 space-y-6">
-        {paginated.map((p) => <ResultItem key={p.id} p={p} />)}
-
-        {paginated.length === 0 && (
+        {loading ? (
+          <div className="text-center text-muted-foreground py-20">Carregando...</div>
+        ) : produtos.length === 0 ? (
           <div className="text-center text-muted-foreground py-20">
             Nada encontrado para <span className="font-medium">“{query}”</span>.
           </div>
+        ) : (
+          produtos.map((p) => <ResultItem key={p.id} p={p} />)
         )}
       </div>
 
@@ -190,57 +189,70 @@ export default function BuscarPage() {
 
 /* ---------- item do resultado (card largo) ---------- */
 function ResultItem({ p }: { p: Produto }) {
-  const cfg = typeConfig[p.tipo as AdType];
+  console.log("Valor de p.tipo:", p.tipo_transacao);
+
+  const borderColor = tipoColor[p.tipo_transacao as keyof typeof tipoColor] || 'border-gray-300';
+
+  console.log("Tipo:", p.tipo_transacao);
+  console.log("Cor da borda:", borderColor);
+
+  const cfg = typeConfig[p.tipo_transacao as AdType] ?? {
+    icon: ShoppingBag,
+    color: "#666",
+  };
+
   const Icon = cfg.icon;
   const color = cfg.color;
-
   
   return (
-    <Card className="bg-white">
-      <div className="flex gap-4 p-4 sm:p-6">
-        {/* imagem */}
-        <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-md border bg-neutral-100 grid place-items-center shrink-0">
-          <ImageIcon className="w-10 h-10 text-neutral-400" />
-        </div>
-
-        {/* conteúdo central */}
-        <div className="flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="font-semibold leading-tight">{p.titulo}</h3>
-              <p className="text-sm text-muted-foreground line-clamp-2">{p.descricao}</p>
-            </div>
+    <Link href={`/produto/${p.id}`} className="block hover:scale-[1.01] transition-transform"> 
+      <Card className={`bg-white cursor-pointer hover:shadow-md border-4 ${borderColor}`}>
+        <div className="flex gap-4 p-4 sm:p-6">
+          {/* imagem */}
+          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-md border bg-neutral-100 grid place-items-center shrink-0">
+            <ImageIcon className="w-10 h-10 text-neutral-400" />
           </div>
 
-          {/* preço / prazo / rating */}
-          <div className="mt-3">
-            {p.tipo === "Venda" || p.tipo === "Aluguel" ? (
-              <div className="text-xl font-bold">{fmtPreco(p.preco)}</div>
-            ) : p.tipo === "Empréstimo" ? (
-              <div className="text-xl font-bold">{p.prazoDias} Dias</div>
-            ) : null}
-
-            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="flex text-yellow-500">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} size={14} className={i < Math.round(p.rating ?? 0) ? "fill-current" : ""} />
-                ))}
+          {/* conteúdo central */}
+          <div className="flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-semibold leading-tight">{p.titulo}</h3>
+                <p className="text-sm text-muted-foreground line-clamp-2">{p.descricao}</p>
               </div>
-              <span>{p.rating?.toFixed(1) ?? "—"} de 5</span>
-              {p.avaliacoes ? <span className="text-xs">{p.avaliacoes} avaliações</span> : null}
+            </div>
+
+            {/* preço / prazo / rating */}
+            <div className="mt-3">
+              {p.tipo_transacao === "VENDA" || p.tipo_transacao === "ALUGUEL" ? (
+                <div className="text-xl font-bold">{fmtPreco(p.preco)}</div>
+                // ================================ ARRUMAR =================================
+              ) //: p.tipo_transacao === "EMPRESTIMO" ? (
+               // <div className="text-xl font-bold">{p.prazoDias} Dias</div> )
+               : null}
+
+              <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex text-yellow-500">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} size={14} className={i < Math.round(p.rating ?? 0) ? "fill-current" : ""} />
+                  ))}
+                </div>
+                <span>{p.rating?.toFixed(1) ?? "—"} de 5</span>
+                {p.avaliacoes ? <span className="text-xs">{p.avaliacoes} avaliações</span> : null}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* coluna direita */}
-        <div className="flex flex-col justify-between items-end w-28">
-          <Badge className={`bg-transparent border text-base ${tipoColor[p.tipo]}`}>
-            <Icon className="!w-5 !h-5" style={{ color }} />
-            {p.tipo}
-          </Badge>
-          <span className="text-base font-bold">{p.estado}</span>
+          {/* coluna direita */}
+          <div className="flex flex-col justify-between items-end w-28">
+            <Badge className={`bg-transparent border text-base ${tipoColor[p.tipo_transacao]}`}>
+              <Icon className="!w-5 !h-5" style={{ color }} />
+              {p.tipo_transacao}
+            </Badge>
+            <span className="text-base font-bold">{p.estado_conservacao}</span>
+          </div>
         </div>
-      </div>
-    </Card>
+      </Card>
+    </Link>
   );
 }

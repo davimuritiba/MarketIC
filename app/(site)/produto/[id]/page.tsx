@@ -19,12 +19,14 @@ function formatCurrency(valueInCents: number) {
 export default async function ProdutoPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
+
   const session = await getSession();
 
   const item = await prisma.item.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       categoria: true,
       imagens: {
@@ -51,9 +53,7 @@ export default async function ProdutoPage({
             },
           },
         },
-        orderBy: {
-          data: "desc",
-        },
+        orderBy: { data: "desc" },
       },
     },
   });
