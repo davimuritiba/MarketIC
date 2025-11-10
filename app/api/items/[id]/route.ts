@@ -218,10 +218,28 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       );
     }
 
-    const prazoDias =
-      data.prazo_dias == null || data.prazo_dias === ""
-        ? null
-        : Number(data.prazo_dias);
+    let prazoDiasNormalizado: number | null = null;
+
+    if (tipoTransacaoNormalizado === "EMPRESTIMO") {
+      const rawPrazo = data.prazo_dias;
+      const parsedPrazo =
+        typeof rawPrazo === "number"
+          ? rawPrazo
+          : typeof rawPrazo === "string" && rawPrazo.trim()
+          ? Number.parseInt(rawPrazo, 10)
+          : NaN;
+
+      if (!Number.isFinite(parsedPrazo) || parsedPrazo < 1 || parsedPrazo > 365) {
+        return NextResponse.json(
+          {
+            error: "Prazo do empréstimo deve ser um número entre 1 e 365 dias.",
+          },
+          { status: 400 },
+        );
+      }
+
+      prazoDiasNormalizado = Math.trunc(parsedPrazo);
+    }
 
     const updatedItem = await prisma.$transaction(async (tx) => {
       await tx.item.update({
@@ -235,7 +253,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
           preco_centavos: precoCentavos,
           preco_formatado: precoFormatado,
           prazo_dias:
-            prazoDias == null || Number.isNaN(prazoDias) ? null : prazoDias,
+            tipoTransacaoNormalizado === "EMPRESTIMO"
+              ? prazoDiasNormalizado
+              : null,
           categoria_id: categoria.id,
         },
       });

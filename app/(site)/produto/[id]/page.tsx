@@ -132,6 +132,8 @@ export default async function ProdutoPage({
     condition: item.estado_conservacao as ConditionType,
     isSale,
     price: formattedPrice,
+    loanDays:
+      item.tipo_transacao === "EMPRESTIMO" ? item.prazo_dias ?? null : null,
     quantity: item.quantidade_disponivel,
     images: (item.imagens || []).map((image) => ({
       id: image.id,

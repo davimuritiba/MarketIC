@@ -328,6 +328,10 @@ function ResultItem({ p }: { p: Produto }) {
                 </div>
               ) : null}
 
+              {p.tipo_transacao === "EMPRESTIMO" && p.prazoDias ? (
+                <div className="text-xl font-bold">{p.prazoDias} dias</div>
+              ) : null}
+
               <div className="mt-1 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <div className="flex text-yellow-500" aria-hidden="true">

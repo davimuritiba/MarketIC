@@ -28,6 +28,7 @@ export interface ProductData {
   condition: ConditionType;
   isSale: boolean;
   price?: string | null;
+  loanDays?: number | null;
   quantity: number;
   images: ProductImage[];
   categoryName?: string | null;
@@ -585,6 +586,9 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
           </p>
           {product.isSale && product.price ? (
             <p className="text-2xl font-bold mt-3">{product.price}</p>
+          ) : null}
+          {product.transactionType === "EMPRESTIMO" && product.loanDays ? (
+            <p className="text-2xl font-bold mt-3">{product.loanDays} dias</p>
           ) : null}
           <div>
             <h3 className="text-xl font-semibold mb-1">Descrição</h3>

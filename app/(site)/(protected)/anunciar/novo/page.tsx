@@ -22,6 +22,7 @@ export default function NovoAnuncioPage() {
   const [tipoTransacao, setTipoTransacao] = useState("");
   const [estadoConservacao, setEstadoConservacao] = useState("");
   const [quantidade, setQuantidade] = useState("1");
+  const [prazoDias, setPrazoDias] = useState("");
   type PreviewFile = {
     file: File;
     preview: string;
@@ -75,6 +76,19 @@ export default function NovoAnuncioPage() {
   const [preco, setPreco] = useState<string>("");
   const [precoCentavos, setPrecoCentavos] = useState<number | null>(null);
 
+  const handleTipoTransacaoChange = (value: string) => {
+    setTipoTransacao(value);
+
+    if (value !== "venda") {
+      setPreco("");
+      setPrecoCentavos(null);
+    }
+
+    if (value !== "emprestimo") {
+      setPrazoDias("");
+    }
+  };
+
   // formata o valor em R$ e guarda centavos para o backend
   const handlePrecoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const digits = e.target.value.replace(/\D/g, ""); // mantém só números
@@ -125,6 +139,20 @@ export default function NovoAnuncioPage() {
       if (!estadoConservacao) {
         throw new Error("Selecione o estado de conservação.");
       }
+      let prazoDiasNormalizado: number | null = null;
+      if (tipoTransacao === "emprestimo") {
+        const parsedPrazo = Number.parseInt(prazoDias, 10);
+        if (
+          !Number.isFinite(parsedPrazo) ||
+          parsedPrazo < 1 ||
+          parsedPrazo > 365
+        ) {
+          throw new Error(
+            "Informe um prazo de empréstimo entre 1 e 365 dias.",
+          );
+        }
+        prazoDiasNormalizado = parsedPrazo;
+      }
       if (tipoTransacao === "venda" && (precoCentavos == null || precoCentavos < 0)) {
         throw new Error("Informe um preço válido.");
       }
@@ -163,6 +191,8 @@ export default function NovoAnuncioPage() {
           estado_conservacao: estadoConservacaoUpper,
           preco_formatado: tipoTransacaoUpper === "VENDA" ? preco : null,
           preco_centavos: tipoTransacaoUpper === "VENDA" ? precoCentavos : null,
+          prazo_dias:
+            tipoTransacaoUpper === "EMPRESTIMO" ? prazoDiasNormalizado : null,
           quantidade_disponivel: quantidadeNormalizada,
           categoria_nome: categoria,
           imagens,
@@ -303,7 +333,7 @@ export default function NovoAnuncioPage() {
           {/* Tipo de transação */}
           <div className="space-y-2">
             <Label className="text-base font-semibold">Tipo de transação</Label>
-            <Select onValueChange={setTipoTransacao}>
+            <Select value={tipoTransacao} onValueChange={handleTipoTransacaoChange}>
               <SelectTrigger className="h-10 cursor-pointer">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
@@ -328,6 +358,29 @@ export default function NovoAnuncioPage() {
                 onChange={handlePrecoChange}
                 className="h-10"
               />
+            </div>
+          )}
+
+          {/* Prazo se for empréstimo */}
+          {tipoTransacao === "emprestimo" && (
+            <div className="space-y-2">
+              <Label htmlFor="prazo-dias" className="text-base font-semibold">
+                Prazo do empréstimo (dias)
+              </Label>
+              <Input
+                id="prazo-dias"
+                type="number"
+                min={1}
+                max={365}
+                step={1}
+                value={prazoDias}
+                onChange={(event) => setPrazoDias(event.target.value)}
+                placeholder="30"
+                className="h-10"
+              />
+              <p className="text-xs text-muted-foreground">
+                Informe um valor entre 1 e 365 dias.
+              </p>
             </div>
           )}
 

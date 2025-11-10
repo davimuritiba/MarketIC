@@ -99,6 +99,7 @@ export async function POST(req: Request) {
       categoria_nome,
       quantidade_disponivel,
       imagens: imagensInput,
+      prazo_dias,
     } = body;
 
     const tipoTransacaoNormalizado =
@@ -181,6 +182,26 @@ export async function POST(req: Request) {
       });
     }
 
+    let prazoDiasNormalizado: number | null = null;
+
+    if (tipoTransacaoNormalizado === "EMPRESTIMO") {
+      const parsedPrazo =
+        typeof prazo_dias === "number"
+          ? prazo_dias
+          : typeof prazo_dias === "string" && prazo_dias.trim()
+          ? Number.parseInt(prazo_dias, 10)
+          : NaN;
+
+      if (!Number.isFinite(parsedPrazo) || parsedPrazo < 1 || parsedPrazo > 365) {
+        return new NextResponse(
+          "Prazo do empréstimo deve ser um número entre 1 e 365 dias.",
+          { status: 400 },
+        );
+      }
+
+      prazoDiasNormalizado = Math.trunc(parsedPrazo);
+    }
+
     const categoria = await prisma.categoria.findFirst({
       where: {
         nome: {
@@ -215,6 +236,10 @@ export async function POST(req: Request) {
           quantidade_disponivel: quantidadeNormalizada,
           publicado_em: publishedAt,
           expira_em: expirationDate,
+          prazo_dias:
+            tipoTransacaoNormalizado === "EMPRESTIMO"
+              ? prazoDiasNormalizado
+              : null,
         },
         select: { id: true },
       });

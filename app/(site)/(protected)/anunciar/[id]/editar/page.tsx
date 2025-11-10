@@ -49,6 +49,7 @@ export default function EditarAnuncioPage() {
   const [tipoTransacao, setTipoTransacao] = useState("");
   const [estadoConservacao, setEstadoConservacao] = useState("");
   const [quantidade, setQuantidade] = useState("1");
+  const [prazoDias, setPrazoDias] = useState("");
   const [selectedImages, setSelectedImages] = useState<EditableImage[]>([]);
   const [preco, setPreco] = useState<string>("");
   const [precoCentavos, setPrecoCentavos] = useState<number | null>(null);
@@ -122,9 +123,18 @@ export default function EditarAnuncioPage() {
         setTitulo(item.titulo ?? "");
         setDescricao(item.descricao ?? "");
         setCategoria(item.categoria?.nome ?? "");
-        setTipoTransacao((item.tipo_transacao ?? "").toLowerCase());
+        const tipo = (item.tipo_transacao ?? "").toLowerCase();
+        setTipoTransacao(tipo);
         setEstadoConservacao((item.estado_conservacao ?? "").toLowerCase());
         setQuantidade(String(item.quantidade_disponivel ?? "1"));
+        if (tipo === "emprestimo") {
+          const prazo = Number(item.prazo_dias);
+          setPrazoDias(
+            Number.isFinite(prazo) && prazo > 0 ? String(Math.trunc(prazo)) : "",
+          );
+        } else {
+          setPrazoDias("");
+        }
 
         if (item.tipo_transacao === "VENDA") {
           if (typeof item.preco_formatado === "string" && item.preco_formatado.trim()) {
@@ -171,6 +181,19 @@ export default function EditarAnuncioPage() {
 
     void carregarAnuncio();
   }, [itemId]);
+
+  const handleTipoTransacaoChange = (value: string) => {
+    setTipoTransacao(value);
+
+    if (value !== "venda") {
+      setPreco("");
+      setPrecoCentavos(null);
+    }
+
+    if (value !== "emprestimo") {
+      setPrazoDias("");
+    }
+  };
 
   const handlePrecoChange = (event: ChangeEvent<HTMLInputElement>) => {
     const digits = event.target.value.replace(/\D/g, "");
@@ -290,6 +313,22 @@ export default function EditarAnuncioPage() {
         throw new Error("Adicione pelo menos uma foto do anúncio.");
       }
 
+      let prazoDiasNormalizado: number | null = null;
+
+      if (tipoTransacao === "emprestimo") {
+        const parsedPrazo = Number.parseInt(prazoDias, 10);
+        if (
+          !Number.isFinite(parsedPrazo) ||
+          parsedPrazo < 1 ||
+          parsedPrazo > 365
+        ) {
+          throw new Error(
+            "Informe um prazo de empréstimo entre 1 e 365 dias.",
+          );
+        }
+        prazoDiasNormalizado = parsedPrazo;
+      }
+
       if (tipoTransacao === "venda") {
         if (precoCentavos == null || precoCentavos < 0) {
           throw new Error("Informe um preço válido.");
@@ -320,6 +359,8 @@ export default function EditarAnuncioPage() {
           preco_formatado: tipoTransacaoUpper === "VENDA" ? preco : null,
           preco_centavos:
             tipoTransacaoUpper === "VENDA" ? precoCentavos : null,
+          prazo_dias:
+            tipoTransacaoUpper === "EMPRESTIMO" ? prazoDiasNormalizado : null,
           quantidade_disponivel: quantidadeNormalizada,
           categoria_nome: categoria,
           imagens: imagensPayload,
@@ -440,7 +481,10 @@ export default function EditarAnuncioPage() {
 
           <div className="space-y-2">
             <Label className="text-base font-semibold">Tipo de transação</Label>
-            <Select value={tipoTransacao} onValueChange={setTipoTransacao}>
+            <Select
+              value={tipoTransacao}
+              onValueChange={handleTipoTransacaoChange}
+            >
               <SelectTrigger className="h-10 cursor-pointer">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
@@ -472,6 +516,28 @@ export default function EditarAnuncioPage() {
                 onChange={handlePrecoChange}
                 className="h-10"
               />
+            </div>
+          )}
+
+          {tipoTransacao === "emprestimo" && (
+            <div className="space-y-2">
+              <Label htmlFor="prazo-dias" className="text-base font-semibold">
+                Prazo do empréstimo (dias)
+              </Label>
+              <Input
+                id="prazo-dias"
+                type="number"
+                min={1}
+                max={365}
+                step={1}
+                value={prazoDias}
+                onChange={(event) => setPrazoDias(event.target.value)}
+                placeholder="30"
+                className="h-10"
+              />
+              <p className="text-xs text-muted-foreground">
+                Informe um valor entre 1 e 365 dias.
+              </p>
             </div>
           )}
 
