@@ -59,8 +59,8 @@ const transactionTextColor: Record<Produto["tipo_transacao"], string> = {
 };
 
 const transactionBorderColor: Record<Produto["tipo_transacao"], string> = {
-  VENDA: "border-red-600",
-  EMPRESTIMO: "border-green-600",
+  VENDA: "border-red-700",
+  EMPRESTIMO: "border-green-700",
   DOACAO: "border-indigo-600",
 };
 type AdType = "VENDA" | "EMPRESTIMO" | "DOACAO";
@@ -283,7 +283,7 @@ function ResultItem({ p }: { p: Produto }) {
 
   return (
     <Link href={`/produto/${p.id}`} className="block hover:scale-[1.01] transition-transform">
-      <Card className={`bg-white cursor-pointer hover:shadow-md border-2 ${borderColor}`}>
+      <Card className={`bg-white cursor-pointer hover:shadow-md border-1 ${borderColor}`}>
         <div className="flex gap-4 p-4 sm:p-6">
           {/* imagem */}
           <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-md border bg-neutral-100 grid place-items-center shrink-0 overflow-hidden">
