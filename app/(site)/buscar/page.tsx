@@ -131,9 +131,13 @@ export default function BuscarPage() {
   const [query, setQuery] = useState(q);
 
   // filtros
-  const [tipo, setTipo] = useState<string>("");       
-  const [estado, setEstado] = useState<string>("");   
-  const [preco, setPreco] = useState<string>("");     
+  const initialTipo = sp.get("tipo")?.toUpperCase() ?? "";
+  const initialEstado = sp.get("estado")?.toUpperCase() ?? "";
+  const initialPreco = sp.get("preco") ?? "";
+
+  const [tipo, setTipo] = useState<string>(initialTipo);
+  const [estado, setEstado] = useState<string>(initialEstado);
+  const [preco, setPreco] = useState<string>(initialPreco);     
 
   // paginação simples
   const [page, setPage] = useState(1);
@@ -142,7 +146,8 @@ export default function BuscarPage() {
   // manter URL sincronizada (sem recarregar)
   useEffect(() => {
     const params = new URLSearchParams(sp.toString());
-    params.set("q", query);
+
+    query ? params.set("q", query) : params.delete("q");
     tipo ? params.set("tipo", tipo) : params.delete("tipo");
     estado ? params.set("estado", estado) : params.delete("estado");
     preco ? params.set("preco", preco) : params.delete("preco");
@@ -154,7 +159,14 @@ export default function BuscarPage() {
     async function fetchProdutos() {
       try {
         setLoading(true);
-        const res = await fetch(`/api/items?q=${encodeURIComponent(query)}&page=${page}`);
+        const params = new URLSearchParams();
+        if (query) params.set("q", query);
+        if (tipo) params.set("tipo", tipo);
+        if (estado) params.set("estado", estado);
+        if (preco) params.set("preco", preco);
+        params.set("page", String(page));
+
+        const res = await fetch(`/api/items?${params.toString()}`);
         if(!res.ok) throw new Error('Erro ao buscar produtos');
         const data = await res.json();
         const mapped = Array.isArray(data)
@@ -170,7 +182,7 @@ export default function BuscarPage() {
     }
 
     if (query != undefined) fetchProdutos();
-  }, [query, page]);
+  }, [query, tipo, estado, preco, page]);
 
   const totalPages = 1
   const paginated = produtos;
@@ -192,37 +204,37 @@ export default function BuscarPage() {
 
         <div className="flex items-center gap-2">
           <span className="font-semibold">Tipo</span>
-          <Select onValueChange={(v) => setTipo(v === "all" ? "" : v)} value={tipo}>
+          <Select onValueChange={(v) => setTipo(v === "all" ? "" : v)} value={tipo || undefined}>
             <SelectTrigger className="h-9 w-44 cursor-pointer">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem className="cursor-pointer" value="all">Todos</SelectItem>
-              <SelectItem className="cursor-pointer" value="Venda">Venda</SelectItem>
-              <SelectItem className="cursor-pointer" value="Empréstimo">Empréstimo</SelectItem>
-              <SelectItem className="cursor-pointer" value="Doação">Doação</SelectItem>
+              <SelectItem className="cursor-pointer" value="VENDA">Venda</SelectItem>
+              <SelectItem className="cursor-pointer" value="EMPRESTIMO">Empréstimo</SelectItem>
+              <SelectItem className="cursor-pointer" value="DOACAO">Doação</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="font-semibold">Estado de conservação</span>
-          <Select onValueChange={(v) => setEstado(v === "all" ? "" : v)} value={estado}>
+          <Select onValueChange={(v) => setEstado(v === "all" ? "" : v)} value={estado || undefined}>
             <SelectTrigger className="h-9 w-48 cursor-pointer">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem className="cursor-pointer" value="all">Todos</SelectItem>
-              <SelectItem className="cursor-pointer" value="Novo">Novo</SelectItem>
-              <SelectItem className="cursor-pointer" value="Seminovo">Seminovo</SelectItem>
-              <SelectItem className="cursor-pointer" value="Usado">Usado</SelectItem>
+              <SelectItem className="cursor-pointer" value="NOVO">Novo</SelectItem>
+              <SelectItem className="cursor-pointer" value="SEMINOVO">Seminovo</SelectItem>
+              <SelectItem className="cursor-pointer" value="USADO">Usado</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="font-semibold">Preço</span>
-          <Select onValueChange={(v) => setPreco(v === "any" ? "" : v)} value={preco}>
+          <Select onValueChange={(v) => setPreco(v === "any" ? "" : v)} value={preco || undefined}>
             <SelectTrigger className="h-9 w-40 cursor-pointer">
               <SelectValue placeholder="Qualquer" />
             </SelectTrigger>

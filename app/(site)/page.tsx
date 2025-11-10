@@ -11,7 +11,7 @@ type Produto = {
   id: string;
   titulo: string;
   descricao: string;
-  tipo: "Venda" | "Empréstimo" | "Doação" | "Aluguel";
+  tipo: "Venda" | "Empréstimo" | "Doação";
   estado: "Novo" | "Seminovo" | "Usado";
   preco?: number;
   prazoDias?: number;
@@ -254,9 +254,6 @@ export default function HomePage() {
                 </SelectItem>
                 <SelectItem className="cursor-pointer" value="Doação">
                   Doação
-                </SelectItem>
-                <SelectItem className="cursor-pointer" value="Aluguel">
-                  Aluguel
                 </SelectItem>
               </SelectContent>
             </Select>

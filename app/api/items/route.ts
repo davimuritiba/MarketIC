@@ -9,15 +9,48 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q")?.trim() ?? "";
+    const tipoParam = searchParams.get("tipo")?.trim().toUpperCase();
+    const estadoParam = searchParams.get("estado")?.trim().toUpperCase();
+    const precoParam = searchParams.get("preco")?.trim();
 
-    const where = q
-      ? {
-          OR: [
-            { titulo: { contains: q, mode: "insensitive" as const } },
-            { descricao: { contains: q, mode: "insensitive" as const } },
-          ],
-        }
-      : {};
+    const where: Prisma.ItemWhereInput = {};
+
+    if (q) {
+      where.OR = [
+        { titulo: { contains: q, mode: "insensitive" } },
+        { descricao: { contains: q, mode: "insensitive" } },
+      ];
+    }
+
+    if (tipoParam && ["VENDA", "EMPRESTIMO", "DOACAO"].includes(tipoParam)) {
+      where.tipo_transacao = tipoParam as TipoTransacao;
+    }
+
+    if (
+      estadoParam &&
+      ["NOVO", "SEMINOVO", "USADO"].includes(estadoParam)
+    ) {
+      where.estado_conservacao = estadoParam as EstadoConservacao;
+    }
+
+    if (precoParam) {
+      const precoFilter: Prisma.IntNullableFilter = { not: null };
+
+      if (precoParam === "0-50") {
+        precoFilter.lte = 50 * 100;
+      } else if (precoParam === "50-100") {
+        precoFilter.gte = 50 * 100;
+        precoFilter.lte = 100 * 100;
+      } else if (precoParam === "100+") {
+        precoFilter.gte = 100 * 100;
+      } else {
+        delete precoFilter.not;
+      }
+
+      if (Object.keys(precoFilter).length > 0) {
+        where.preco_centavos = precoFilter;
+      }
+    }
 
     const items = await prisma.item.findMany({
       where,
@@ -59,7 +92,7 @@ export async function POST(req: Request) {
     const {
       titulo,
       descricao,
-      tipo_transacao, // "VENDA" | "EMPRESTIMO" | "DOACAO" | "ALUGUEL" (se usar aluguel depois)
+      tipo_transacao, // "VENDA" | "EMPRESTIMO" | "DOACAO"
       estado_conservacao, // "NOVO" | "SEMINOVO" | "USADO"
       preco_centavos, // number | null (em centavos)
       preco_formatado, // string | null (opcional)
