@@ -24,6 +24,13 @@ export async function GET(req: Request) {
       include: {
         categoria: true,
         usuario: { select: { id: true, nome: true, email_institucional: true } },
+        imagens: {
+          orderBy: { ordem: "asc" },
+          take: 1,
+        },
+        avaliacoes: {
+          select: { nota: true },
+        },
       },
       orderBy: { titulo: "asc" },
     });

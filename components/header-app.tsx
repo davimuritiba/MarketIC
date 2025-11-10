@@ -190,6 +190,14 @@ export function HeaderApp({ user }: HeaderAppProps) {
               >
                 Meu carrinho
               </Link>
+              <Link
+                href="/mensagens"
+                className="px-4 py-2 text-sm hover:bg-neutral-100"
+                onClick={handleCloseDropdown}
+                role="menuitem"
+              >
+                Mensagens
+              </Link>
               <button
                 type="button"
                 className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer text-left"

@@ -1,7 +1,7 @@
 // app/(site)/buscar/page.tsx
 "use client";
 
-import { useMemo, useState, useEffect, ElementType } from "react";
+import { useState, useEffect, ElementType } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,38 +10,113 @@ import { Button } from "@/components/ui/button";
 import { Star, ImageIcon, ShoppingBag, Repeat2, Gift } from "lucide-react";
 import Link from "next/link";
 
-/* ---------- (substituir por fetch no back depois) ---------- */
 type Produto = {
   id: string;
   titulo: string;
   descricao: string;
-  tipo_transacao: "VENDA" | "EMPRESTIMO" | "DOACAO" | "ALUGUEL";
-  estado_conservacao: "Novo" | "Seminovo" | "Usado";
-  preco?: number;     // Venda/Aluguel
+  tipo_transacao: "VENDA" | "EMPRESTIMO" | "DOACAO";
+  estado_conservacao: "NOVO" | "SEMINOVO" | "USADO";
+  preco?: number; // Venda
+  precoFormatado?: string;
   prazoDias?: number; // Empréstimo
-  avaliacoes?: number;
+  avaliacoes: number;
   rating?: number;
+  imagem_url?: string;
   categoria: string;
 };
 
-/* ---------- helpers ---------- */
-const tipoColor: Record<Produto["tipo_transacao"], string> = {
-  "VENDA": "text-red-600",
-  "EMPRESTIMO": "text-green-700",
-  "DOACAO": "text-indigo-700",
-  "ALUGUEL": "text-amber-700",
+type ApiProduto = {
+  id: string;
+  titulo: string;
+  descricao: string | null;
+  tipo_transacao: Produto["tipo_transacao"];
+  estado_conservacao: Produto["estado_conservacao"];
+  preco_centavos?: number | null;
+  preco_formatado?: string | null;
+  categoria?: { nome?: string | null } | null;
+  imagens?: { url: string | null }[];
+  avaliacoes?: { nota: number | null }[];
+  prazo_dias?: number | null;
 };
-type AdType = "VENDA" | "EMPRESTIMO" | "DOACAO" | "ALUGUEL";
+
+/* ---------- helpers ---------- */
+const transactionLabel: Record<Produto["tipo_transacao"], string> = {
+  VENDA: "Venda",
+  EMPRESTIMO: "Empréstimo",
+  DOACAO: "Doação",
+};
+
+const conditionLabel: Record<Produto["estado_conservacao"], string> = {
+  NOVO: "Novo",
+  SEMINOVO: "Seminovo",
+  USADO: "Usado",
+};
+
+const transactionTextColor: Record<Produto["tipo_transacao"], string> = {
+  VENDA: "text-red-600",
+  EMPRESTIMO: "text-green-700",
+  DOACAO: "text-indigo-700",
+};
+
+const transactionBorderColor: Record<Produto["tipo_transacao"], string> = {
+  VENDA: "border-red-600",
+  EMPRESTIMO: "border-green-600",
+  DOACAO: "border-indigo-600",
+};
+type AdType = "VENDA" | "EMPRESTIMO" | "DOACAO";
 
 const typeConfig: Record<AdType, { icon: ElementType; color: string }> = {
   VENDA: { icon: ShoppingBag, color: "#EC221F" },
   EMPRESTIMO: { icon: Repeat2, color: "#0A5C0A" },
   DOACAO: { icon: Gift, color: "#0B0B64" },
-  ALUGUEL: { icon: ImageIcon, color: "#A65E2E" },
 };
 
+const formatPreco = (preco?: number, precoFormatado?: string) => {
+  if (precoFormatado && precoFormatado.trim()) {
+    return precoFormatado;
+  }
 
-const fmtPreco = (v?: number) => (typeof v === "number" ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—");
+  if (typeof preco === "number") {
+    return preco.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  }
+
+  return "—";
+};
+
+const mapApiProduto = (item: ApiProduto): Produto => {
+  const notas = (item.avaliacoes ?? [])
+    .map((avaliacao) => (typeof avaliacao.nota === "number" ? avaliacao.nota : null))
+    .filter((nota): nota is number => nota !== null && Number.isFinite(nota));
+
+  const totalAvaliacoes = notas.length;
+  const rating = totalAvaliacoes
+    ? notas.reduce((total, nota) => total + nota, 0) / totalAvaliacoes
+    : undefined;
+
+  const precoCentavos =
+    typeof item.preco_centavos === "number" ? item.preco_centavos : undefined;
+
+  return {
+    id: item.id,
+    titulo: item.titulo,
+    descricao: item.descricao ?? "",
+    tipo_transacao: item.tipo_transacao,
+    estado_conservacao: item.estado_conservacao,
+    preco: typeof precoCentavos === "number" ? precoCentavos / 100 : undefined,
+    precoFormatado: item.preco_formatado ?? undefined,
+    prazoDias:
+      typeof item.prazo_dias === "number" && Number.isFinite(item.prazo_dias)
+        ? item.prazo_dias
+        : undefined,
+    avaliacoes: totalAvaliacoes,
+    rating,
+    imagem_url: item.imagens?.[0]?.url ?? undefined,
+    categoria: item.categoria?.nome ?? "",
+  };
+};
 
 /* ---------- página ---------- */
 export default function BuscarPage() {
@@ -82,8 +157,10 @@ export default function BuscarPage() {
         const res = await fetch(`/api/items?q=${encodeURIComponent(query)}&page=${page}`);
         if(!res.ok) throw new Error('Erro ao buscar produtos');
         const data = await res.json();
-        console.log("DADOS RECEBIDOS DA API:", data);
-        setProdutos(data);
+        const mapped = Array.isArray(data)
+          ? data.map((item: ApiProduto) => mapApiProduto(item))
+          : [];
+        setProdutos(mapped);
       } catch (error) {
         console.error("Erro ao carregar produtos:",error);
         setProdutos([]);
@@ -124,7 +201,6 @@ export default function BuscarPage() {
               <SelectItem className="cursor-pointer" value="Venda">Venda</SelectItem>
               <SelectItem className="cursor-pointer" value="Empréstimo">Empréstimo</SelectItem>
               <SelectItem className="cursor-pointer" value="Doação">Doação</SelectItem>
-              <SelectItem className="cursor-pointer" value="Aluguel">Aluguel</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -189,12 +265,9 @@ export default function BuscarPage() {
 
 /* ---------- item do resultado (card largo) ---------- */
 function ResultItem({ p }: { p: Produto }) {
-  console.log("Valor de p.tipo:", p.tipo_transacao);
-
-  const borderColor = tipoColor[p.tipo_transacao as keyof typeof tipoColor] || 'border-gray-300';
-
-  console.log("Tipo:", p.tipo_transacao);
-  console.log("Cor da borda:", borderColor);
+  const borderColor =
+    transactionBorderColor[p.tipo_transacao as keyof typeof transactionBorderColor] ||
+    "border-gray-300";
 
   const cfg = typeConfig[p.tipo_transacao as AdType] ?? {
     icon: ShoppingBag,
@@ -203,14 +276,27 @@ function ResultItem({ p }: { p: Produto }) {
 
   const Icon = cfg.icon;
   const color = cfg.color;
-  
+  const ratingValue = Math.round(p.rating ?? 0);
+  const avaliacoesLabel = `${p.avaliacoes} ${p.avaliacoes === 1 ? "avaliação" : "avaliações"}`;
+  const transaction = transactionLabel[p.tipo_transacao] ?? p.tipo_transacao;
+  const condition = conditionLabel[p.estado_conservacao] ?? p.estado_conservacao;
+
   return (
-    <Link href={`/produto/${p.id}`} className="block hover:scale-[1.01] transition-transform"> 
-      <Card className={`bg-white cursor-pointer hover:shadow-md border-4 ${borderColor}`}>
+    <Link href={`/produto/${p.id}`} className="block hover:scale-[1.01] transition-transform">
+      <Card className={`bg-white cursor-pointer hover:shadow-md border-2 ${borderColor}`}>
         <div className="flex gap-4 p-4 sm:p-6">
           {/* imagem */}
-          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-md border bg-neutral-100 grid place-items-center shrink-0">
-            <ImageIcon className="w-10 h-10 text-neutral-400" />
+          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-md border bg-neutral-100 grid place-items-center shrink-0 overflow-hidden">
+            {p.imagem_url ? (
+              <img
+                src={p.imagem_url}
+                alt={`Imagem do produto ${p.titulo}`}
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <ImageIcon className="w-10 h-10 text-neutral-400" />
+            )}
           </div>
 
           {/* conteúdo central */}
@@ -224,32 +310,39 @@ function ResultItem({ p }: { p: Produto }) {
 
             {/* preço / prazo / rating */}
             <div className="mt-3">
-              {p.tipo_transacao === "VENDA" || p.tipo_transacao === "ALUGUEL" ? (
-                <div className="text-xl font-bold">{fmtPreco(p.preco)}</div>
-                // ================================ ARRUMAR =================================
-              ) //: p.tipo_transacao === "EMPRESTIMO" ? (
-               // <div className="text-xl font-bold">{p.prazoDias} Dias</div> )
-               : null}
-
-              <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="flex text-yellow-500">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} size={14} className={i < Math.round(p.rating ?? 0) ? "fill-current" : ""} />
-                  ))}
+              {p.tipo_transacao === "VENDA" && (p.preco != null || p.precoFormatado) ? (
+                <div className="text-xl font-bold">
+                  {formatPreco(p.preco, p.precoFormatado)}
                 </div>
-                <span>{p.rating?.toFixed(1) ?? "—"} de 5</span>
-                {p.avaliacoes ? <span className="text-xs">{p.avaliacoes} avaliações</span> : null}
+              ) : null}
+
+              <div className="mt-1 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <div className="flex text-yellow-500" aria-hidden="true">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        size={14}
+                        className={i < ratingValue ? "fill-current" : ""}
+                      />
+                    ))}
+                  </div>
+                  <span>{p.rating != null ? p.rating.toFixed(1) : "—"} de 5</span>
+                </div>
+                <div className="text-xs">{avaliacoesLabel}</div>
               </div>
             </div>
           </div>
 
           {/* coluna direita */}
           <div className="flex flex-col justify-between items-end w-28">
-            <Badge className={`bg-transparent border text-base ${tipoColor[p.tipo_transacao]}`}>
+            <Badge
+              className={`bg-transparent border text-base flex items-center gap-1 ${transactionTextColor[p.tipo_transacao]}`}
+            >
               <Icon className="!w-5 !h-5" style={{ color }} />
-              {p.tipo_transacao}
+              {transaction}
             </Badge>
-            <span className="text-base font-bold">{p.estado_conservacao}</span>
+            <span className="text-base font-bold">{condition}</span>
           </div>
         </div>
       </Card>
