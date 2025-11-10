@@ -1,14 +1,17 @@
-// app/(site)/buscar/page.tsx
 "use client";
 
-import { useState, useEffect, ElementType } from "react";
+import { useState, useEffect, ElementType, FormEvent } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Star, ImageIcon, ShoppingBag, Repeat2, Gift } from "lucide-react";
 import Link from "next/link";
+import { resolveCourseLabel } from "@/lib/course-labels";
 
 type Produto = {
   id: string;
@@ -23,6 +26,13 @@ type Produto = {
   rating?: number;
   imagem_url?: string;
   categoria: string;
+};
+
+type Perfil = {
+  id: string;
+  nome: string;
+  curso: string | null;
+  avatarUrl: string | null;
 };
 
 type ApiProduto = {
@@ -124,11 +134,19 @@ export default function BuscarPage() {
   const router = useRouter();
 
   const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [itemsLoading, setItemsLoading] = useState(false);
+  const [profiles, setProfiles] = useState<Perfil[]>([]);
+  const [profilesLoading, setProfilesLoading] = useState(false);
+  const [profilesError, setProfilesError] = useState<string | null>(null);
 
   // query inicial vinda do header (?q=)
   const q = sp.get("q")?.toString() ?? "";
   const [query, setQuery] = useState(q);
+  const [searchInput, setSearchInput] = useState(q);
+
+  type TabValue = "itens" | "perfis";
+  const initialTab = sp.get("tab") === "perfis" ? "perfis" : "itens";
+  const [activeTab, setActiveTab] = useState<TabValue>(initialTab);
 
   // filtros
   const initialTipo = sp.get("tipo")?.toUpperCase() ?? "";
@@ -143,22 +161,41 @@ export default function BuscarPage() {
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
+  useEffect(() => {
+    setSearchInput(q);
+  }, [q]);
+
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setQuery(searchInput.trim());
+  };
+
   // manter URL sincronizada (sem recarregar)
   useEffect(() => {
     const params = new URLSearchParams(sp.toString());
 
     query ? params.set("q", query) : params.delete("q");
-    tipo ? params.set("tipo", tipo) : params.delete("tipo");
-    estado ? params.set("estado", estado) : params.delete("estado");
-    preco ? params.set("preco", preco) : params.delete("preco");
-    params.set("page", String(page));
+    params.set("tab", activeTab);
+
+    if (activeTab === "itens") {
+      tipo ? params.set("tipo", tipo) : params.delete("tipo");
+      estado ? params.set("estado", estado) : params.delete("estado");
+      preco ? params.set("preco", preco) : params.delete("preco");
+      params.set("page", String(page));
+    } else {
+      params.delete("tipo");
+      params.delete("estado");
+      params.delete("preco");
+      params.delete("page");
+    }
+
     router.replace(`/buscar?${params.toString()}`);
-  }, [query, tipo, estado, preco, page]);
+  }, [query, tipo, estado, preco, page, activeTab]);
 
   useEffect(() => {
     async function fetchProdutos() {
       try {
-        setLoading(true);
+        setItemsLoading(true);
         const params = new URLSearchParams();
         if (query) params.set("q", query);
         if (tipo) params.set("tipo", tipo);
@@ -177,18 +214,55 @@ export default function BuscarPage() {
         console.error("Erro ao carregar produtos:",error);
         setProdutos([]);
       } finally {
-        setLoading(false);
+        setItemsLoading(false);
       }
     }
 
-    if (query != undefined) fetchProdutos();
-  }, [query, tipo, estado, preco, page]);
+    if (activeTab === "itens" && query != undefined) fetchProdutos();
+  }, [query, tipo, estado, preco, page, activeTab]);
+
+  useEffect(() => {
+    async function fetchProfiles() {
+      try {
+        setProfilesLoading(true);
+        setProfilesError(null);
+        const params = new URLSearchParams();
+        if (query) params.set("q", query);
+
+        const res = await fetch(`/api/profile/search?${params.toString()}`);
+        if (!res.ok) {
+          throw new Error("Erro ao buscar perfis");
+        }
+
+        const data = await res.json();
+        const mapped = Array.isArray(data)
+          ? data.map((item: { id: string; nome: string; curso?: string | null; avatarUrl?: string | null; }) => ({
+              id: item.id,
+              nome: item.nome,
+              curso: item.curso ?? null,
+              avatarUrl: item.avatarUrl ?? null,
+            }))
+          : [];
+        setProfiles(mapped);
+      } catch (error) {
+        console.error("Erro ao carregar perfis:", error);
+        setProfiles([]);
+        setProfilesError("Não foi possível carregar os perfis.");
+      } finally {
+        setProfilesLoading(false);
+      }
+    }
+
+    if (activeTab === "perfis" && query != undefined) {
+      fetchProfiles();
+    }
+  }, [activeTab, query]);
 
   const totalPages = 1
   const paginated = produtos;
 
   // reset página ao mudar filtros
-  useEffect(() => { setPage(1); }, [query, tipo, estado, preco]);
+  useEffect(() => { setPage(1); }, [query, tipo, estado, preco, activeTab]);
 
   return (
     <div className="max-w-screen-2xl mx-auto px-4 py-6">
@@ -196,81 +270,110 @@ export default function BuscarPage() {
         Resultados de: <span className="italic">“{q || query || "Todos"}”</span>
       </h1>
 
-      {/* barra de filtros */}
-      <div className="flex flex-wrap items-center gap-4 border-b pb-3">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold">Filtrar por:</span>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)} className="mt-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:justify-between">
+          <TabsList className="self-start">
+            <TabsTrigger value="itens" className="cursor-pointer text-base" >Itens</TabsTrigger>
+            <TabsTrigger value="perfis" className="cursor-pointer text-base" >Perfis</TabsTrigger>
+          </TabsList>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="font-semibold">Tipo</span>
-          <Select onValueChange={(v) => setTipo(v === "all" ? "" : v)} value={tipo || undefined}>
-            <SelectTrigger className="h-9 w-44 cursor-pointer">
-              <SelectValue placeholder="Todos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem className="cursor-pointer" value="all">Todos</SelectItem>
-              <SelectItem className="cursor-pointer" value="VENDA">Venda</SelectItem>
-              <SelectItem className="cursor-pointer" value="EMPRESTIMO">Empréstimo</SelectItem>
-              <SelectItem className="cursor-pointer" value="DOACAO">Doação</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <TabsContent value="itens" className="mt-6">
+          {/* barra de filtros */}
+          <div className="flex flex-wrap items-center gap-4 border-b pb-3">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Filtrar por:</span>
+            </div>
 
-        <div className="flex items-center gap-2">
-          <span className="font-semibold">Estado de conservação</span>
-          <Select onValueChange={(v) => setEstado(v === "all" ? "" : v)} value={estado || undefined}>
-            <SelectTrigger className="h-9 w-48 cursor-pointer">
-              <SelectValue placeholder="Todos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem className="cursor-pointer" value="all">Todos</SelectItem>
-              <SelectItem className="cursor-pointer" value="NOVO">Novo</SelectItem>
-              <SelectItem className="cursor-pointer" value="SEMINOVO">Seminovo</SelectItem>
-              <SelectItem className="cursor-pointer" value="USADO">Usado</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Tipo</span>
+              <Select onValueChange={(v) => setTipo(v === "all" ? "" : v)} value={tipo || undefined}>
+                <SelectTrigger className="h-9 w-44 cursor-pointer">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem className="cursor-pointer" value="all">Todos</SelectItem>
+                  <SelectItem className="cursor-pointer" value="VENDA">Venda</SelectItem>
+                  <SelectItem className="cursor-pointer" value="EMPRESTIMO">Empréstimo</SelectItem>
+                  <SelectItem className="cursor-pointer" value="DOACAO">Doação</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="flex items-center gap-2">
-          <span className="font-semibold">Preço</span>
-          <Select onValueChange={(v) => setPreco(v === "any" ? "" : v)} value={preco || undefined}>
-            <SelectTrigger className="h-9 w-40 cursor-pointer">
-              <SelectValue placeholder="Qualquer" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem className="cursor-pointer" value="any">Qualquer</SelectItem>
-              <SelectItem className="cursor-pointer" value="0-50">até R$ 50</SelectItem>
-              <SelectItem className="cursor-pointer" value="50-100">R$ 50–100</SelectItem>
-              <SelectItem className="cursor-pointer" value="100+">R$ 100+</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Estado de conservação</span>
+              <Select onValueChange={(v) => setEstado(v === "all" ? "" : v)} value={estado || undefined}>
+                <SelectTrigger className="h-9 w-48 cursor-pointer">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem className="cursor-pointer" value="all">Todos</SelectItem>
+                  <SelectItem className="cursor-pointer" value="NOVO">Novo</SelectItem>
+                  <SelectItem className="cursor-pointer" value="SEMINOVO">Seminovo</SelectItem>
+                  <SelectItem className="cursor-pointer" value="USADO">Usado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-      {/* listagem */}
-      <div className="mt-6 space-y-6">
-        {loading ? (
-          <div className="text-center text-muted-foreground py-20">Carregando...</div>
-        ) : produtos.length === 0 ? (
-          <div className="text-center text-muted-foreground py-20">
-            Nada encontrado para <span className="font-medium">“{query}”</span>.
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Preço</span>
+              <Select onValueChange={(v) => setPreco(v === "any" ? "" : v)} value={preco || undefined}>
+                <SelectTrigger className="h-9 w-40 cursor-pointer">
+                  <SelectValue placeholder="Qualquer" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem className="cursor-pointer" value="any">Qualquer</SelectItem>
+                  <SelectItem className="cursor-pointer" value="0-50">até R$ 50</SelectItem>
+                  <SelectItem className="cursor-pointer" value="50-100">R$ 50–100</SelectItem>
+                  <SelectItem className="cursor-pointer" value="100+">R$ 100+</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        ) : (
-          produtos.map((p) => <ResultItem key={p.id} p={p} />)
-        )}
-      </div>
 
-      {/* paginação */}
-      <div className="mt-8 flex items-center justify-center gap-2">
-        <Button variant="outline" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
-          Anterior
-        </Button>
-        <span className="px-3 py-2 text-sm rounded-md border bg-white">{page} / {totalPages}</span>
-        <Button variant="outline" disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
-          Próximo
-        </Button>
-      </div>
+          {/* listagem */}
+          <div className="mt-6 space-y-6">
+            {itemsLoading ? (
+              <div className="text-center text-muted-foreground py-20">Carregando...</div>
+            ) : produtos.length === 0 ? (
+              <div className="text-center text-muted-foreground py-20">
+                Nada encontrado para <span className="font-medium">“{query}”</span>.
+              </div>
+            ) : (
+              produtos.map((p) => <ResultItem key={p.id} p={p} />)
+            )}
+          </div>
+
+          {/* paginação */}
+          <div className="mt-8 flex items-center justify-center gap-2">
+            <Button variant="outline" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
+              Anterior
+            </Button>
+            <span className="px-3 py-2 text-sm rounded-md border bg-white">{page} / {totalPages}</span>
+            <Button variant="outline" disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
+              Próximo
+            </Button>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="perfis" className="mt-6">
+          {profilesLoading ? (
+            <div className="text-center text-muted-foreground py-20">Carregando perfis...</div>
+          ) : profilesError ? (
+            <div className="text-center text-destructive py-20">{profilesError}</div>
+          ) : profiles.length === 0 ? (
+            <div className="text-center text-muted-foreground py-20">
+              Nenhum perfil encontrado para <span className="font-medium">“{query}”</span>.
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {profiles.map((profile) => (
+                <ProfileResultCard key={profile.id} profile={profile} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -359,6 +462,36 @@ function ResultItem({ p }: { p: Produto }) {
               {transaction}
             </Badge>
             <span className="text-base font-bold">{condition}</span>
+          </div>
+        </div>
+      </Card>
+    </Link>
+  );
+}
+
+function ProfileResultCard({ profile }: { profile: Perfil }) {
+  const initials = profile.nome
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("") || "US";
+
+  const courseLabel = profile.curso
+    ? resolveCourseLabel(profile.curso) ?? profile.curso
+    : "Curso não informado";
+
+  return (
+    <Link href={`/perfil/${profile.id}`} className="block hover:scale-[1.01] transition-transform">
+      <Card className="h-full cursor-pointer hover:shadow-md">
+        <div className="flex flex-col items-center gap-3 p-6 text-center">
+          <Avatar className="h-20 w-20 border">
+            <AvatarImage src={profile.avatarUrl ?? undefined} alt={`Foto de ${profile.nome}`} />
+            <AvatarFallback className="uppercase font-semibold">{initials}</AvatarFallback>
+          </Avatar>
+          <div>
+            <h3 className="text-lg font-semibold text-neutral-900">{profile.nome}</h3>
+            <p className="text-sm text-muted-foreground">{courseLabel}</p>
           </div>
         </div>
       </Card>
