@@ -51,4 +51,6 @@ export interface PublicProfileUserData {
 export interface PublicProfilePageData {
   user: PublicProfileUserData
   activeAds: ProfileAdItem[]
+  viewerCanReviewUser: boolean
+  viewerHasReviewedUser: boolean
 }

@@ -1,8 +1,16 @@
 "use client"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import type { FormEvent } from "react"
+import { useState } from "react"
+
 import { GraduationCap, Calendar, Star } from "lucide-react"
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 
 import { resolveCourseLabel } from "@/lib/course-labels"
 import type { PublicProfileUserData } from "@/types/profile"
@@ -35,14 +43,97 @@ function getInitials(name?: string | null) {
 
 type PublicProfileCardProps = {
   user: PublicProfileUserData
+  viewerCanReviewUser: boolean
+  viewerHasReviewedUser: boolean
 }
 
-export default function PublicProfileCard({ user }: PublicProfileCardProps) {
+export default function PublicProfileCard({
+  user,
+  viewerCanReviewUser,
+  viewerHasReviewedUser,
+}: PublicProfileCardProps) {
   const courseLabel = user.curso
     ? resolveCourseLabel(user.curso) ?? user.curso
     : "Curso não informado"
-  const rating = user.reputacaoMedia ?? 0
-  const ratingCount = user.reputacaoCount ?? 0
+  const [rating, setRating] = useState(user.reputacaoMedia ?? 0)
+  const [ratingCount, setRatingCount] = useState(user.reputacaoCount ?? 0)
+  const [canReview, setCanReview] = useState(viewerCanReviewUser)
+  const [hasReviewed, setHasReviewed] = useState(viewerHasReviewedUser)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedRating, setSelectedRating] = useState<number | null>(null)
+  const [reviewTitle, setReviewTitle] = useState("")
+  const [reviewComment, setReviewComment] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  const handleDialogChange = (open: boolean) => {
+    setIsDialogOpen(open)
+    if (!open) {
+      setErrorMessage(null)
+    }
+  }
+
+  const handleSubmitReview = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (selectedRating == null) {
+      setErrorMessage("Selecione uma nota entre 1 e 5.")
+      return
+    }
+
+    setIsSubmitting(true)
+    setErrorMessage(null)
+
+    try {
+      const response = await fetch(`/api/users/${user.id}/reviews`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          rating: selectedRating,
+          title: reviewTitle,
+          comment: reviewComment,
+        }),
+      })
+
+      const payload = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        const message =
+          payload && typeof payload.error === "string"
+            ? payload.error
+            : "Não foi possível registrar a avaliação."
+        setErrorMessage(message)
+        return
+      }
+
+      const updatedRating =
+        payload && typeof payload.rating === "number"
+          ? payload.rating
+          : rating
+      const updatedRatingCount =
+        payload && typeof payload.ratingCount === "number"
+          ? payload.ratingCount
+          : ratingCount
+
+      setRating(updatedRating)
+      setRatingCount(updatedRatingCount)
+      setCanReview(false)
+      setHasReviewed(true)
+      setSuccessMessage("Avaliação enviada com sucesso!")
+      setIsDialogOpen(false)
+      setSelectedRating(null)
+      setReviewTitle("")
+      setReviewComment("")
+    } catch (error) {
+      console.error("Erro ao registrar avaliação do usuário", error)
+      setErrorMessage("Não foi possível registrar a avaliação.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <Card className="w-full">
@@ -116,8 +207,104 @@ export default function PublicProfileCard({ user }: PublicProfileCardProps) {
               Este usuário ainda não possui avaliações.
             </p>
           )}
+          {successMessage ? (
+            <p className="text-sm text-emerald-600">{successMessage}</p>
+          ) : null}
+          {canReview ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="cursor-pointer"
+              onClick={() => {
+                setSelectedRating(null)
+                setReviewTitle("")
+                setReviewComment("")
+                setErrorMessage(null)
+                setIsDialogOpen(true)
+              }}
+            >
+              Avaliar usuário
+            </Button>
+          ) : null}
+          {!canReview && hasReviewed ? (
+            <p className="text-sm text-muted-foreground">
+              Você já avaliou este usuário.
+            </p>
+          ) : null}
         </section>
       </CardContent>
+      <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Avaliar usuário</DialogTitle>
+            <DialogDescription>
+              Compartilhe sua experiência com outros compradores.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmitReview} className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Nota do usuário</p>
+              <div className="flex gap-2 text-yellow-500">
+                {Array.from({ length: 5 }).map((_, index) => {
+                  const value = index + 1
+                  const isActive =
+                    selectedRating != null && value <= selectedRating
+
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setSelectedRating(value)}
+                      className={`transition-colors ${
+                        isActive ? "text-yellow-500" : "text-gray-300"
+                      } cursor-pointer`}
+                      aria-label={`Selecionar nota ${value}`}
+                    >
+                      <Star size={24} className={isActive ? "fill-current" : ""} />
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="user-review-title">
+                Título (opcional)
+              </label>
+              <Input
+                id="user-review-title"
+                placeholder="Resumo da sua experiência"
+                value={reviewTitle}
+                onChange={(event) => setReviewTitle(event.target.value)}
+                maxLength={120}
+              />
+            </div>
+            <div className="space-y-2">
+              <label
+                className="text-sm font-medium"
+                htmlFor="user-review-comment"
+              >
+                Comentário (opcional)
+              </label>
+              <Textarea
+                id="user-review-comment"
+                placeholder="Conte mais detalhes sobre sua negociação"
+                value={reviewComment}
+                onChange={(event) => setReviewComment(event.target.value)}
+                maxLength={1000}
+                rows={4}
+              />
+            </div>
+            {errorMessage ? (
+              <p className="text-sm text-destructive">{errorMessage}</p>
+            ) : null}
+            <DialogFooter>
+              <Button type="submit" disabled={isSubmitting} className="bg-[#1500FF] hover:bg-[#1200d6] cursor-pointer">
+                {isSubmitting ? "Enviando..." : "Enviar avaliação"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

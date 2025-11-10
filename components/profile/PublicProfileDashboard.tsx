@@ -9,11 +9,17 @@ import PublicProfileCard from "./PublicProfileCard"
 export default function PublicProfileDashboard({
   user,
   activeAds,
+  viewerCanReviewUser,
+  viewerHasReviewedUser,
 }: PublicProfilePageData) {
   return (
     <div className="max-w-screen-2xl mx-auto px-4 py-6 grid grid-cols-12 gap-6">
       <div className="col-span-12 md:col-span-4 lg:col-span-3 space-y-10">
-        <PublicProfileCard user={user} />
+        <PublicProfileCard
+          user={user}
+          viewerCanReviewUser={viewerCanReviewUser}
+          viewerHasReviewedUser={viewerHasReviewedUser}
+        />
       </div>
 
       <div className="col-span-12 md:col-span-8 lg:col-span-9 space-y-10">

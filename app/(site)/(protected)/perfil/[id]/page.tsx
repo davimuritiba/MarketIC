@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 
 import PublicProfileDashboard from "@/components/profile/PublicProfileDashboard"
+import { getSession } from "@/lib/auth"
 import { getPublicProfilePageData } from "@/lib/profile"
 
 interface PublicProfilePageProps {
@@ -10,7 +11,11 @@ interface PublicProfilePageProps {
 export default async function PublicProfilePage({
   params,
 }: PublicProfilePageProps) {
-  const data = await getPublicProfilePageData(params.id)
+  const session = await getSession()
+  const data = await getPublicProfilePageData(
+    params.id,
+    session?.usuario_id ?? null,
+  )
 
   if (!data) {
     notFound()

@@ -145,6 +145,7 @@ export async function getProfilePageData(userId: string): Promise<ProfilePageDat
 
 export async function getPublicProfilePageData(
   userId: string,
+  viewerUserId?: string | null,
 ): Promise<PublicProfilePageData | null> {
   await refreshExpiredItemsForUser(userId)
 
@@ -186,6 +187,25 @@ export async function getPublicProfilePageData(
     (item) => item.statusCode === "PUBLICADO",
   )
 
+  let viewerHasReviewedUser = false
+
+  if (viewerUserId && viewerUserId !== userId) {
+    const existingReview = await prisma.avaliacaoUsuario.findUnique({
+      where: {
+        avaliador_id_avaliado_id: {
+          avaliador_id: viewerUserId,
+          avaliado_id: userId,
+        },
+      },
+      select: { id: true },
+    })
+
+    viewerHasReviewedUser = Boolean(existingReview)
+  }
+
+  const viewerCanReviewUser =
+    Boolean(viewerUserId) && viewerUserId !== userId && !viewerHasReviewedUser
+
   return {
     user: {
       id: usuario.id,
@@ -199,5 +219,7 @@ export async function getPublicProfilePageData(
       reputacaoCount: usuario.reputacao_count ?? 0,
     },
     activeAds: activeAdsItems.map((item) => ({ ...item })),
+    viewerCanReviewUser,
+    viewerHasReviewedUser,
   }
 }

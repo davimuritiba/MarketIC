@@ -29,6 +29,8 @@ model Usuario {
   foto_documento_url  String
   criados             AvaliacaoItem[] @relation("CriadorAvaliacao")
   avaliacoes          AvaliacaoItem[] @relation("UsuarioAvaliacoes")
+  avaliacoesRecebidas AvaliacaoUsuario[] @relation("UsuarioAvaliacoesRecebidas")
+  avaliacoesRealizadas AvaliacaoUsuario[] @relation("UsuarioAvaliacoesRealizadas")
   carrinho            CarrinhoItem[]
   favoritos           Favorito[]
   interesses          Interesse[]
@@ -85,6 +87,21 @@ model AvaliacaoItem {
   item              Item      @relation(fields: [anuncio_id], references: [id])
   criador           Usuario?  @relation("CriadorAvaliacao", fields: [criado_por], references: [id])
   usuario           Usuario   @relation("UsuarioAvaliacoes", fields: [usuario_id], references: [id])
+}
+
+model AvaliacaoUsuario {
+  id           String   @id @default(uuid()) @db.Uuid
+  avaliador_id String   @db.Uuid
+  avaliado_id  String   @db.Uuid
+  nota         Float
+  titulo       String?
+  comentario   String?
+  data         DateTime @default(now())
+
+  avaliador Usuario @relation("UsuarioAvaliacoesRealizadas", fields: [avaliador_id], references: [id], onDelete: Cascade)
+  avaliado  Usuario @relation("UsuarioAvaliacoesRecebidas", fields: [avaliado_id], references: [id], onDelete: Cascade)
+
+  @@unique([avaliador_id, avaliado_id])
 }
 
 model Interesse {
