@@ -673,7 +673,7 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
             <Button
               variant="outline"
               size="sm"
-              className="mt-3"
+              className="mt-3 cursor-pointer"
               onClick={() => setIsReviewDialogOpen(true)}
             >
               Avaliar produto
@@ -755,7 +755,7 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
                       key={value}
                       type="button"
                       onClick={() => setSelectedRating(value)}
-                      className={`transition-colors ${isActive ? "text-yellow-500" : "text-gray-300"}`}
+                      className={`transition-colors ${isActive ? "text-yellow-500" : "text-gray-300"} cursor-pointer`}
                       aria-label={`Selecionar nota ${value}`}
                     >
                       <Star size={24} className={isActive ? "fill-current" : ""} />
@@ -796,12 +796,13 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
               <Button
                 type="button"
                 variant="ghost"
+                className="cursor-pointer"
                 onClick={() => handleReviewDialogChange(false)}
                 disabled={isSubmittingReview}
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmittingReview} className="bg-[#1500FF] hover:bg-[#1200d6]">
+              <Button type="submit" disabled={isSubmittingReview} className="bg-[#1500FF] hover:bg-[#1200d6] cursor-pointer">
                 {isSubmittingReview ? "Enviando..." : "Enviar avaliação"}
               </Button>
             </DialogFooter>

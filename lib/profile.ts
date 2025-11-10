@@ -157,6 +157,8 @@ export async function getPublicProfilePageData(
         curso: true,
         data_nascimento: true,
         foto_documento_url: true,
+        reputacao_media: true,
+        reputacao_count: true,
       },
     }),
     prisma.item.findMany({
@@ -193,6 +195,8 @@ export async function getPublicProfilePageData(
         ? usuario.data_nascimento.toISOString()
         : null,
       avatarUrl: usuario.foto_documento_url ?? null,
+      reputacaoMedia: usuario.reputacao_media ?? null,
+      reputacaoCount: usuario.reputacao_count ?? 0,
     },
     activeAds: activeAdsItems.map((item) => ({ ...item })),
   }

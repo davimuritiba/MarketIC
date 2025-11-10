@@ -44,6 +44,8 @@ export interface PublicProfileUserData {
   curso: string | null
   dataNascimento: string | null
   avatarUrl: string | null
+  reputacaoMedia: number | null
+  reputacaoCount: number
 }
 
 export interface PublicProfilePageData {

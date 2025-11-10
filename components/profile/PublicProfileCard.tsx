@@ -2,7 +2,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { GraduationCap, Calendar } from "lucide-react"
+import { GraduationCap, Calendar, Star } from "lucide-react"
 
 import { resolveCourseLabel } from "@/lib/course-labels"
 import type { PublicProfileUserData } from "@/types/profile"
@@ -41,6 +41,8 @@ export default function PublicProfileCard({ user }: PublicProfileCardProps) {
   const courseLabel = user.curso
     ? resolveCourseLabel(user.curso) ?? user.curso
     : "Curso não informado"
+  const rating = user.reputacaoMedia ?? 0
+  const ratingCount = user.reputacaoCount ?? 0
 
   return (
     <Card className="w-full">
@@ -58,28 +60,63 @@ export default function PublicProfileCard({ user }: PublicProfileCardProps) {
         <CardTitle className="text-lg text-center">{user.nome}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
-            <GraduationCap className="h-5 w-5 text-neutral-600" />
+        <section className="space-y-4">
+          <h3 className="text-lg font-semibold text-neutral-800">
+            Informações do usuário
+          </h3>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+              <GraduationCap className="h-5 w-5 text-neutral-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-neutral-700">Curso</p>
+              <p className="text-sm text-neutral-600">{courseLabel}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-neutral-700">Curso</p>
-            <p className="text-sm text-neutral-600">{courseLabel}</p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+              <Calendar className="h-5 w-5 text-neutral-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-neutral-700">
+                Data de nascimento
+              </p>
+              <p className="text-sm text-neutral-600">
+                {formatDate(user.dataNascimento)}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
-            <Calendar className="h-5 w-5 text-neutral-600" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-neutral-700">
-              Data de nascimento
+        </section>
+        <section className="space-y-3">
+          <h3 className="text-lg font-semibold text-neutral-800">
+            Classificação do usuário
+          </h3>
+          {ratingCount > 0 ? (
+            <>
+              <div className="flex items-center gap-2">
+                <div className="flex text-yellow-500">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <Star
+                      key={index}
+                      size={20}
+                      className={index < Math.round(rating) ? "fill-current" : ""}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  {rating.toFixed(1)} de 5
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {ratingCount} avaliação{ratingCount > 1 ? "es" : ""}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Este usuário ainda não possui avaliações.
             </p>
-            <p className="text-sm text-neutral-600">
-              {formatDate(user.dataNascimento)}
-            </p>
-          </div>
-        </div>
+          )}
+        </section>
       </CardContent>
     </Card>
   )
