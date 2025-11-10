@@ -4,7 +4,11 @@ import { resolveItemStatus, type StatusSource } from "@/lib/item-status"
 import { prisma } from "@/lib/prisma"
 import { refreshExpiredItemsForUser } from "@/lib/status-service"
 
-import type { ProfileAdItem, ProfilePageData } from "@/types/profile"
+import type {
+  ProfileAdItem,
+  ProfilePageData,
+  PublicProfilePageData,
+} from "@/types/profile"
 
 const MAX_ACTIVE_AND_ACQUIRED = 12
 type ProfileItem = PrismaItemWithRelations & StatusSource
@@ -136,5 +140,60 @@ export async function getProfilePageData(userId: string): Promise<ProfilePageDat
     historyAds: profileAds,
     acquiredItems: acquiredItems.map(mapItemToAd),
     courses: courseOptions,
+  }
+}
+
+export async function getPublicProfilePageData(
+  userId: string,
+): Promise<PublicProfilePageData | null> {
+  await refreshExpiredItemsForUser(userId)
+
+  const [usuario, allAds] = await prisma.$transaction([
+    prisma.usuario.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        nome: true,
+        curso: true,
+        data_nascimento: true,
+        foto_documento_url: true,
+      },
+    }),
+    prisma.item.findMany({
+      where: { usuario_id: userId },
+      include: {
+        imagens: {
+          orderBy: { ordem: "asc" },
+          take: 1,
+        },
+        avaliacoes: {
+          select: { nota: true },
+        },
+      },
+      orderBy: [{ created_at: "desc" }, { titulo: "asc" }],
+    }),
+  ])
+
+  if (!usuario) {
+    return null
+  }
+
+  const profileAds = (allAds as ProfileItem[]).map(mapItemToProfileAd)
+
+  const activeAdsItems = profileAds.filter(
+    (item) => item.statusCode === "PUBLICADO",
+  )
+
+  return {
+    user: {
+      id: usuario.id,
+      nome: usuario.nome,
+      curso: usuario.curso ?? null,
+      dataNascimento: usuario.data_nascimento
+        ? usuario.data_nascimento.toISOString()
+        : null,
+      avatarUrl: usuario.foto_documento_url ?? null,
+    },
+    activeAds: activeAdsItems.map((item) => ({ ...item })),
   }
 }

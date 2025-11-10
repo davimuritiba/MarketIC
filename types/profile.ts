@@ -37,3 +37,16 @@ export interface ProfilePageData {
   acquiredItems: CardAdItem[]
   courses: CourseOption[]
 }
+
+export interface PublicProfileUserData {
+  id: string
+  nome: string
+  curso: string | null
+  dataNascimento: string | null
+  avatarUrl: string | null
+}
+
+export interface PublicProfilePageData {
+  user: PublicProfileUserData
+  activeAds: ProfileAdItem[]
+}
