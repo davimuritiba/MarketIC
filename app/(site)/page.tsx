@@ -1,14 +1,26 @@
 "use client";
+
 /*Lógica de score “Recomendado”
 Quando o front pede itens com ordenação “recomendado”, a API calcula um score somando quatro bônus: recência (anúncios novos ganham até +2), 
 reputação do vendedor (média de avaliações mais um bônus que cresce com a contagem de reviews até +1), qualidade do anúncio (imagem principal, 
 descrição longa e preço válido em vendas somam até +2,5) e engajamento (favoritos e interesses podem render até +3,5). 
 Depois dessa soma, a lista é reordenada pelo score resultante; empates são desempates pela data de publicação mais recente.*/
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ElementType } from "react";
 import Link from "next/link";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, } from "@/components/ui/select";
-import { Plus, Grid2X2, ShoppingCart, Heart, BookOpen, Cpu, Dumbbell, Guitar, Boxes, } from "lucide-react";
+import {
+  Plus,
+  Grid2X2,
+  ShoppingCart,
+  Heart,
+  Smartphone,
+  Cpu,
+  Dumbbell,
+  Guitar,
+  BookOpen,
+  Boxes,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AdGridPager } from "@/components/AdCard";
 import { mapItemToAd, type PrismaItemWithRelations } from "@/lib/ad-mapper";
@@ -17,6 +29,31 @@ interface Categoria {
   id: string;
   nome: string;
 }
+
+type FixedCategory = {
+  key: string;
+  nome: string;
+  icon: ElementType;
+};
+
+const FIXED_CATEGORIES: FixedCategory[] = [
+  { key: "celulares", nome: "Celulares", icon: Smartphone },
+  { key: "eletronicos", nome: "Eletrônicos", icon: Cpu },
+  { key: "esportes", nome: "Esportes", icon: Dumbbell },
+  { key: "hobbies", nome: "Hobbies", icon: Guitar },
+  { key: "livros", nome: "Livros", icon: BookOpen },
+  { key: "outros", nome: "Outros", icon: Boxes },
+];
+
+const CATEGORY_NAME_TO_KEY: Record<string, string> = FIXED_CATEGORIES.reduce(
+  (acc, category) => {
+    acc[category.nome] = category.key;
+    return acc;
+  },
+  {} as Record<string, string>,
+);
+
+const FALLBACK_CATEGORY_KEY = CATEGORY_NAME_TO_KEY["Outros"] ?? "";
 
 type ApiItem = PrismaItemWithRelations & {
   categoria?: { id: string; nome: string } | null;
@@ -44,15 +81,16 @@ const CONDITION_TO_API: Record<string, string> = {
 };
 
 export default function HomePage() {
-  const [categories, setCategories] = useState<Categoria[]>([]);
+  const categories = FIXED_CATEGORIES;
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const [categoryIds, setCategoryIds] = useState<Record<string, string>>({});
 
   const [items, setItems] = useState<ApiItem[]>([]);
   const [itemsLoading, setItemsLoading] = useState(true);
   const [itemsError, setItemsError] = useState<string | null>(null);
 
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState("");
   const [tipo, setTipo] = useState("");
   const [estado, setEstado] = useState("");
   const [preco, setPreco] = useState("");
@@ -75,7 +113,14 @@ export default function HomePage() {
           return;
         }
 
-        setCategories(data ?? []);
+        const mappedIds: Record<string, string> = {};
+        for (const apiCategory of data ?? []) {
+          const key = CATEGORY_NAME_TO_KEY[apiCategory.nome];
+          if (key) {
+            mappedIds[key] = apiCategory.id;
+          }
+        }
+        setCategoryIds(mappedIds);
       } catch (error) {
         console.error("Erro ao carregar categorias", error);
         if (!active) {
@@ -100,6 +145,13 @@ export default function HomePage() {
     };
   }, []);
 
+  const selectedCategoryId = useMemo(() => {
+    if (!selectedCategoryKey) {
+      return "";
+    }
+    return categoryIds[selectedCategoryKey] ?? "";
+  }, [categoryIds, selectedCategoryKey]);
+
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
@@ -110,7 +162,7 @@ export default function HomePage() {
         setItemsError(null);
 
         const params = new URLSearchParams();
-        if (selectedCategory) params.set("categoriaId", selectedCategory);
+        if (selectedCategoryId) params.set("categoriaId", selectedCategoryId);
         if (tipo) {
           const mapped = TRANSACTION_TO_API[tipo] ?? tipo;
           params.set("tipo", mapped);
@@ -167,9 +219,54 @@ export default function HomePage() {
       active = false;
       controller.abort();
     };
-  }, [selectedCategory, tipo, estado, preco, sort]);
+  }, [estado, preco, selectedCategoryId, sort, tipo]);
 
   const adItems = useMemo(() => items.map((item) => mapItemToAd(item)), [items]);
+
+  const categoryKeyById = useMemo(() => {
+    const map: Record<string, string> = {};
+    Object.entries(categoryIds).forEach(([key, id]) => {
+      if (id) {
+        map[id] = key;
+      }
+    });
+    return map;
+  }, [categoryIds]);
+
+  const itemsByCategory = useMemo(() => {
+    const grouped: Record<string, typeof adItems> = {};
+    for (const category of categories) {
+      grouped[category.key] = [];
+    }
+
+    for (const item of adItems) {
+      const keyFromId = item.categoryId ? categoryKeyById[item.categoryId] : undefined;
+      const keyFromName = item.categoryName
+        ? CATEGORY_NAME_TO_KEY[item.categoryName]
+        : undefined;
+      const resolvedKey = keyFromId ?? keyFromName ?? FALLBACK_CATEGORY_KEY;
+
+      if (!resolvedKey) {
+        continue;
+      }
+
+      if (!grouped[resolvedKey]) {
+        grouped[resolvedKey] = [];
+      }
+
+      grouped[resolvedKey]!.push(item);
+    }
+
+    return grouped;
+  }, [adItems, categories, categoryKeyById]);
+
+  const hasItemsInCategories = useMemo(
+    () =>
+      categories.some(
+        (category) => (itemsByCategory[category.key]?.length ?? 0) > 0,
+      ),
+    [categories, itemsByCategory],
+  );
 
   const actions = [
     { label: "Novo Anúncio", href: "/anunciar/novo", icon: Plus },
@@ -178,21 +275,13 @@ export default function HomePage() {
     { label: "Favoritos", href: "/favoritos", icon: Heart },
   ];
 
-  const catIcons: Record<string, React.ElementType> = {
-    Livros: BookOpen,
-    "Eletrônicos": Cpu,
-    Esportes: Dumbbell,
-    Hobbies: Guitar,
-    Outros: Boxes,
-  };
-
   const selectedCategoryName = useMemo(() => {
-    if (!selectedCategory) {
+    if (!selectedCategoryKey) {
       return "";
     }
-    const match = categories.find((category) => category.id === selectedCategory);
+    const match = categories.find((category) => category.key === selectedCategoryKey);
     return match?.nome ?? "";
-  }, [categories, selectedCategory]);
+  }, [categories, selectedCategoryKey]);
 
   return (
     <div className="space-y-8">
@@ -214,23 +303,20 @@ export default function HomePage() {
       <section className="space-y-3">
         <div className="flex items-center gap-2">
           <h2 className="text-xl font-semibold">Categorias</h2>
-          {categoriesLoading ? (
-            <span className="text-xs text-muted-foreground">Carregando...</span>
-          ) : null}
           {categoriesError ? (
             <span className="text-xs text-red-600">{categoriesError}</span>
           ) : null}
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {categories.map((category) => {
-            const Icon = catIcons[category.nome] ?? Boxes;
-            const isActive = selectedCategory === category.id;
+            const Icon = category.icon;
+            const isActive = selectedCategoryKey === category.key;
             return (
               <button
-                key={category.id}
+                key={category.key}
                 onClick={() =>
-                  setSelectedCategory((prev) =>
-                    prev === category.id ? "" : category.id,
+                  setSelectedCategoryKey((prev) =>
+                    prev === category.key ? "" : category.key,
                   )
                 }
                 className={
@@ -244,11 +330,6 @@ export default function HomePage() {
               </button>
             );
           })}
-          {!categoriesLoading && categories.length === 0 ? (
-            <div className="col-span-full text-sm text-muted-foreground">
-              Nenhuma categoria disponível no momento.
-            </div>
-          ) : null}
         </div>
       </section>
 
@@ -374,12 +455,26 @@ export default function HomePage() {
           <div className="text-center text-muted-foreground py-20">
             Carregando anúncios...
           </div>
-        ) : adItems.length > 0 ? (
-          <AdGridPager
-            items={adItems}
-            maxPerPage={8}
-            gridClass="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
-          />
+        ) : hasItemsInCategories ? (
+          <div className="space-y-8">
+            {categories.map((category) => {
+              const categoryItems = itemsByCategory[category.key] ?? [];
+              if (categoryItems.length === 0) {
+                return null;
+              }
+
+              return (
+                <div key={category.key} className="space-y-3">
+                  <h3 className="text-xl font-semibold">{category.nome}</h3>
+                  <AdGridPager
+                    items={categoryItems}
+                    maxPerPage={8}
+                    gridClass="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
+                  />
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <div className="text-center text-muted-foreground py-20">
             Nenhum anúncio encontrado.

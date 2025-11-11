@@ -9,13 +9,18 @@ export interface AdItem {
   id: string
   href: string
   title: string
-  type: "Venda" | "Empréstimo" | "Doação" 
+  type: "Venda" | "Empréstimo" | "Doação"
   price?: string
   days?: number
   condition?: "Novo" | "Seminovo" | "Usado"
   rating?: number
   reviews?: number
   image?: string
+  categoryId?: string
+  categoryName?: string
+  sellerName?: string
+  sellerRating?: number
+  sellerReviews?: number
 }
 
 const typeConfig: Record<AdItem["type"], { icon: ElementType; color: string }> = {

@@ -1,4 +1,4 @@
-import type { AvaliacaoItem, EstadoConservacao, ImagemAnuncio, Item, TipoTransacao, Usuario, } from "@prisma/client"
+import type { AvaliacaoItem, Categoria, EstadoConservacao, ImagemAnuncio, Item, TipoTransacao, Usuario, } from "@prisma/client"
 
 import type { AdItem } from "@/components/AdCard"
 import type { ConditionLabel, TransactionLabel } from "@/types/profile"
@@ -19,6 +19,7 @@ export interface PrismaItemWithRelations extends Item {
   imagens: ImagemAnuncio[]
   avaliacoes: Pick<AvaliacaoItem, "nota">[]
   usuario?: Pick<Usuario, "id" | "nome" | "reputacao_media" | "reputacao_count">
+  categoria?: Pick<Categoria, "id" | "nome">
 }
 
 export function formatPrice(
@@ -73,6 +74,8 @@ export function mapItemToAd(item: PrismaItemWithRelations): AdItem {
     rating: averageRating,
     reviews: ratingValues.length || undefined,
     image: item.imagens?.[0]?.url ?? undefined,
+    categoryId: item.categoria_id,
+    categoryName: item.categoria?.nome ?? undefined,
     sellerName: item.usuario?.nome ?? undefined,
     sellerRating,
     sellerReviews,
