@@ -137,6 +137,8 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
   const [sharedContact, setSharedContact] = useState<
     ProductData["viewerSharedContact"]
   >(product.viewerSharedContact ?? null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [reviewToDelete, setReviewToDelete] = useState<ProductReview | null>(null);
 
   const stars = useMemo(() => Array.from({ length: 5 }), []);
 
