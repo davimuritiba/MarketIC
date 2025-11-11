@@ -72,6 +72,7 @@ export default async function MensagensPage() {
           },
           usuario: {
             select: {
+              id: true,
               nome: true,
               email_institucional: true,
               telefone: true,
@@ -130,6 +131,7 @@ export default async function MensagensPage() {
             transactionLabelMap[item.tipo_transacao] ?? item.tipo_transacao,
           imageUrl: item.imagens?.[0]?.url ?? null,
           owner: {
+            id: item.usuario?.id ?? null,
             name: item.usuario?.nome ?? null,
             email: item.usuario?.email_institucional ?? null,
             phone: item.usuario?.telefone ?? null,

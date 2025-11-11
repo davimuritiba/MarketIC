@@ -45,6 +45,7 @@ export type UserInterestCardData = {
     transactionLabel: string;
     imageUrl: string | null;
     owner: {
+      id: string | null;
       name: string | null;
       email: string | null;
       phone: string | null;
@@ -316,23 +317,31 @@ function OwnerInterestCard({
       </div>
 
       <div className="mt-6 flex items-start gap-4 border-t border-neutral-200 pt-6">
-        <AvatarCircle imageUrl={interest.interestedUser.avatarUrl} fallback={initials} />
-        <div className="flex flex-col">
-          <span className="text-base font-semibold text-neutral-900">
-            {interestedName}
-          </span>
-          <span className="text-sm text-neutral-500">
-            {interest.interestedUser.email ?? "E-mail não informado"}
-          </span>
-          <span className="text-sm text-neutral-600">
-            {formattedCourse ?? "Curso não informado"}
-          </span>
-          {interest.interestedUser.phone ? (
-            <span className="text-sm text-neutral-600">
-              {formattedPhone ?? interest.interestedUser.phone}
+        <Link
+          href={`/perfil/${interest.interestedUser.id}`}
+          className="group flex items-start gap-4"
+        >
+          <AvatarCircle
+            imageUrl={interest.interestedUser.avatarUrl}
+            fallback={initials}
+          />
+          <div className="flex flex-col">
+            <span className="text-base font-semibold text-neutral-900 transition-colors group-hover:text-blue-600">
+              {interestedName}
             </span>
-          ) : null}
-        </div>
+            <span className="text-sm text-neutral-500">
+              {interest.interestedUser.email ?? "E-mail não informado"}
+            </span>
+            <span className="text-sm text-neutral-600">
+              {formattedCourse ?? "Curso não informado"}
+            </span>
+            {interest.interestedUser.phone ? (
+              <span className="text-sm text-neutral-600">
+                {formattedPhone ?? interest.interestedUser.phone}
+              </span>
+            ) : null}
+          </div>
+        </Link>
       </div>
 
       <Dialog
@@ -512,16 +521,40 @@ function UserInterestCard({ interest }: { interest: UserInterestCardData }) {
       </div>
 
       <div className="mt-6 flex items-start gap-4 border-t border-neutral-200 pt-6">
-        <AvatarCircle
-          imageUrl={interest.item.owner.avatarUrl}
-          fallback={ownerInitials}
-        />
-        <div className="flex flex-col">
-          <span className="text-base font-semibold text-neutral-900">
-            {ownerName}
-          </span>
-          <span className="text-sm text-neutral-600">Contato: {contactDisplay}</span>
-        </div>
+        {interest.item.owner.id ? (
+          <Link
+            href={`/perfil/${interest.item.owner.id}`}
+            className="group flex items-start gap-4"
+          >
+            <AvatarCircle
+              imageUrl={interest.item.owner.avatarUrl}
+              fallback={ownerInitials}
+            />
+            <div className="flex flex-col">
+              <span className="text-base font-semibold text-neutral-900 transition-colors group-hover:text-blue-600">
+                {ownerName}
+              </span>
+              <span className="text-sm text-neutral-600">
+                Contato: {contactDisplay}
+              </span>
+            </div>
+          </Link>
+        ) : (
+          <>
+            <AvatarCircle
+              imageUrl={interest.item.owner.avatarUrl}
+              fallback={ownerInitials}
+            />
+            <div className="flex flex-col">
+              <span className="text-base font-semibold text-neutral-900">
+                {ownerName}
+              </span>
+              <span className="text-sm text-neutral-600">
+                Contato: {contactDisplay}
+              </span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

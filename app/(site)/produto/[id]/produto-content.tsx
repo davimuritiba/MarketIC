@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { Star, ShoppingBag, Heart, Gift, Repeat2 } from "lucide-react";
 
@@ -509,15 +510,23 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
         </div>
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
-            <Avatar>
-              <AvatarImage src={product.seller.avatarUrl ?? undefined} alt={`Avatar de ${product.seller.name}`} />
-              <AvatarFallback>
-                {product.seller.name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <h2 className="text-xl font-semibold">{product.seller.name}</h2>
-              <div className="flex items-center justify-between">
+            <Link
+              href={`/perfil/${product.seller.id}`}
+              className="group flex flex-1 items-center gap-4"
+            >
+              <Avatar>
+                <AvatarImage
+                  src={product.seller.avatarUrl ?? undefined}
+                  alt={`Avatar de ${product.seller.name}`}
+                />
+                <AvatarFallback>
+                  {product.seller.name.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col">
+                <h2 className="text-xl font-semibold transition-colors group-hover:text-blue-600">
+                  {product.seller.name}
+                </h2>
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2">
                     <div className="flex text-yellow-500">
@@ -539,13 +548,13 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
                       : `${sellerReviewCount} avaliações`}
                   </span>
                 </div>
-                <div className={`flex items-center gap-1 ${typeConfig.colorClass}`}>
-                  <TypeIcon className="w-5 h-5" />
-                  <span className="text-base font-medium">
-                    {typeConfig.label}
-                  </span>
-                </div>
               </div>
+            </Link>
+            <div className={`flex items-center gap-1 ${typeConfig.colorClass}`}>
+              <TypeIcon className="w-5 h-5" />
+              <span className="text-base font-medium">
+                {typeConfig.label}
+              </span>
             </div>
           </div>
           <div className="h-px bg-black" />
