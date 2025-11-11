@@ -11,6 +11,7 @@ export default function PublicProfileDashboard({
   activeAds,
   viewerCanReviewUser,
   viewerHasReviewedUser,
+  reviews,
 }: PublicProfilePageData) {
   return (
     <div className="max-w-screen-2xl mx-auto px-4 py-6 grid grid-cols-12 gap-6">
@@ -19,6 +20,7 @@ export default function PublicProfileDashboard({
           user={user}
           viewerCanReviewUser={viewerCanReviewUser}
           viewerHasReviewedUser={viewerHasReviewedUser}
+          reviews={reviews}
         />
       </div>
 

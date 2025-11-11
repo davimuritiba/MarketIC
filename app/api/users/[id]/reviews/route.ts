@@ -134,6 +134,11 @@ export async function POST(
           title: result.review.titulo,
           comment: result.review.comentario,
           createdAt: result.review.data.toISOString(),
+          reviewer: {
+            id: session.usuario!.id,
+            name: session.usuario!.nome,
+            avatarUrl: session.usuario!.foto_documento_url ?? null,
+          },
         },
         rating: result.rating,
         ratingCount: result.ratingCount,

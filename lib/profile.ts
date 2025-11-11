@@ -149,7 +149,7 @@ export async function getPublicProfilePageData(
 ): Promise<PublicProfilePageData | null> {
   await refreshExpiredItemsForUser(userId)
 
-  const [usuario, allAds] = await prisma.$transaction([
+  const [usuario, allAds, userReviews] = await prisma.$transaction([
     prisma.usuario.findUnique({
       where: { id: userId },
       select: {
@@ -174,6 +174,19 @@ export async function getPublicProfilePageData(
         },
       },
       orderBy: [{ created_at: "desc" }, { titulo: "asc" }],
+    }),
+    prisma.avaliacaoUsuario.findMany({
+      where: { avaliado_id: userId },
+      include: {
+        avaliador: {
+          select: {
+            id: true,
+            nome: true,
+            foto_documento_url: true,
+          },
+        },
+      },
+      orderBy: { data: "desc" },
     }),
   ])
 
@@ -221,5 +234,17 @@ export async function getPublicProfilePageData(
     activeAds: activeAdsItems.map((item) => ({ ...item })),
     viewerCanReviewUser,
     viewerHasReviewedUser,
+    reviews: userReviews.map((review) => ({
+      id: review.id,
+      rating: review.nota,
+      title: review.titulo ?? null,
+      comment: review.comentario ?? null,
+      createdAt: review.data.toISOString(),
+      reviewer: {
+        id: review.avaliador.id,
+        name: review.avaliador.nome,
+        avatarUrl: review.avaliador.foto_documento_url ?? null,
+      },
+    })),
   }
 }

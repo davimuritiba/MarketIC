@@ -1,7 +1,7 @@
 "use client"
 
 import type { FormEvent } from "react"
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { GraduationCap, Calendar, Star } from "lucide-react"
 
@@ -13,7 +13,12 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 
 import { resolveCourseLabel } from "@/lib/course-labels"
-import type { PublicProfileUserData } from "@/types/profile"
+import type {
+  PublicProfileUserData,
+  PublicProfileUserReview,
+} from "@/types/profile"
+
+const REVIEW_PREVIEW_LIMIT = 3
 
 function formatDate(value: string | null) {
   if (!value) return "Data de nascimento não informada"
@@ -41,16 +46,31 @@ function getInitials(name?: string | null) {
   return name.charAt(0).toUpperCase()
 }
 
+function formatReviewDate(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return "Data indisponível"
+  }
+
+  return date.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  })
+}
+
 type PublicProfileCardProps = {
   user: PublicProfileUserData
   viewerCanReviewUser: boolean
   viewerHasReviewedUser: boolean
+  reviews: PublicProfileUserReview[]
 }
 
 export default function PublicProfileCard({
   user,
   viewerCanReviewUser,
   viewerHasReviewedUser,
+  reviews,
 }: PublicProfileCardProps) {
   const courseLabel = user.curso
     ? resolveCourseLabel(user.curso) ?? user.curso
@@ -60,12 +80,25 @@ export default function PublicProfileCard({
   const [canReview, setCanReview] = useState(viewerCanReviewUser)
   const [hasReviewed, setHasReviewed] = useState(viewerHasReviewedUser)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isReviewListOpen, setIsReviewListOpen] = useState(false)
   const [selectedRating, setSelectedRating] = useState<number | null>(null)
   const [reviewTitle, setReviewTitle] = useState("")
   const [reviewComment, setReviewComment] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [userReviews, setUserReviews] = useState(reviews)
+
+  useEffect(() => {
+    setUserReviews(reviews)
+  }, [reviews])
+
+  const previewReviews = useMemo(
+    () => userReviews.slice(0, REVIEW_PREVIEW_LIMIT),
+    [userReviews],
+  )
+  const hasMoreReviews = userReviews.length > REVIEW_PREVIEW_LIMIT
+  const reviewStars = useMemo(() => Array.from({ length: 5 }), [])
 
   const handleDialogChange = (open: boolean) => {
     setIsDialogOpen(open)
@@ -118,6 +151,58 @@ export default function PublicProfileCard({
           ? payload.ratingCount
           : ratingCount
 
+      const createdReview = (() => {
+        const review = payload?.review
+        if (!review || typeof review !== "object") {
+          return null
+        }
+
+        const id = "id" in review ? String(review.id) : null
+        const ratingValue =
+          "rating" in review && typeof review.rating === "number"
+            ? review.rating
+            : null
+        const createdAt =
+          "createdAt" in review && typeof review.createdAt === "string"
+            ? review.createdAt
+            : null
+        const reviewer =
+          "reviewer" in review &&
+          review.reviewer &&
+          typeof review.reviewer === "object" &&
+          "id" in review.reviewer &&
+          "name" in review.reviewer
+            ? {
+                id: String(review.reviewer.id),
+                name: String(review.reviewer.name),
+                avatarUrl:
+                  "avatarUrl" in review.reviewer &&
+                  typeof review.reviewer.avatarUrl === "string"
+                    ? review.reviewer.avatarUrl
+                    : null,
+              }
+            : null
+
+        if (!id || ratingValue == null || !createdAt || !reviewer) {
+          return null
+        }
+
+        return {
+          id,
+          rating: ratingValue,
+          title:
+            "title" in review && typeof review.title === "string"
+              ? review.title
+              : null,
+          comment:
+            "comment" in review && typeof review.comment === "string"
+              ? review.comment
+              : null,
+          createdAt,
+          reviewer,
+        } satisfies PublicProfileUserReview
+      })()
+
       setRating(updatedRating)
       setRatingCount(updatedRatingCount)
       setCanReview(false)
@@ -127,6 +212,9 @@ export default function PublicProfileCard({
       setSelectedRating(null)
       setReviewTitle("")
       setReviewComment("")
+      if (createdReview) {
+        setUserReviews((previous) => [createdReview, ...previous])
+      }
     } catch (error) {
       console.error("Erro ao registrar avaliação do usuário", error)
       setErrorMessage("Não foi possível registrar a avaliação.")
@@ -232,6 +320,77 @@ export default function PublicProfileCard({
             </p>
           ) : null}
         </section>
+        <section className="space-y-4">
+          {previewReviews.length ? (
+            <div className="space-y-6">
+              {previewReviews.map((review) => (
+                <article key={review.id} className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage
+                        src={review.reviewer.avatarUrl ?? undefined}
+                        alt={`Avatar de ${review.reviewer.name}`}
+                      />
+                      <AvatarFallback>
+                        {getInitials(review.reviewer.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-semibold text-neutral-800">
+                        {review.reviewer.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatReviewDate(review.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-yellow-500">
+                    {reviewStars.map((_, index) => (
+                      <Star
+                        key={index}
+                        size={16}
+                        className={
+                          index < Math.round(review.rating)
+                            ? "fill-current"
+                            : ""
+                        }
+                      />
+                    ))}
+                  </div>
+                  {review.title ? (
+                    <h4 className="text-sm font-medium text-neutral-800">
+                      {review.title}
+                    </h4>
+                  ) : null}
+                  {review.comment ? (
+                    <p className="text-sm text-muted-foreground whitespace-pre-line">
+                      {review.comment}
+                    </p>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Este usuário ainda não possui avaliações com comentários.
+            </p>
+          )}
+          {userReviews.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setIsReviewListOpen(true)}
+              className="text-sm font-medium text-[#1500FF] hover:underline cursor-pointer"
+            >
+              Ver todas as avaliações
+            </button>
+          ) : null}
+          {hasMoreReviews ? (
+            <p className="text-xs text-muted-foreground">
+              Exibindo as {Math.min(REVIEW_PREVIEW_LIMIT, userReviews.length)}
+              {" "}avaliações mais recentes.
+            </p>
+          ) : null}
+        </section>
       </CardContent>
       <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
         <DialogContent className="sm:max-w-[480px]">
@@ -303,6 +462,70 @@ export default function PublicProfileCard({
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isReviewListOpen} onOpenChange={setIsReviewListOpen}>
+        <DialogContent className="sm:max-w-[540px]">
+          <DialogHeader>
+            <DialogTitle>Todas as avaliações</DialogTitle>
+            <DialogDescription>
+              Veja o que outros usuários comentaram sobre {user.nome}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-6">
+            {userReviews.length ? (
+              userReviews.map((review) => (
+                <article key={review.id} className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage
+                        src={review.reviewer.avatarUrl ?? undefined}
+                        alt={`Avatar de ${review.reviewer.name}`}
+                      />
+                      <AvatarFallback>
+                        {getInitials(review.reviewer.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-semibold text-neutral-800">
+                        {review.reviewer.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatReviewDate(review.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-yellow-500">
+                    {reviewStars.map((_, index) => (
+                      <Star
+                        key={index}
+                        size={16}
+                        className={
+                          index < Math.round(review.rating)
+                            ? "fill-current"
+                            : ""
+                        }
+                      />
+                    ))}
+                  </div>
+                  {review.title ? (
+                    <h4 className="text-sm font-medium text-neutral-800">
+                      {review.title}
+                    </h4>
+                  ) : null}
+                  {review.comment ? (
+                    <p className="text-sm text-muted-foreground whitespace-pre-line">
+                      {review.comment}
+                    </p>
+                  ) : null}
+                </article>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Nenhuma avaliação disponível para este usuário.
+              </p>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </Card>

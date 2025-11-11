@@ -48,9 +48,23 @@ export interface PublicProfileUserData {
   reputacaoCount: number
 }
 
+export interface PublicProfileUserReview {
+  id: string
+  rating: number
+  title: string | null
+  comment: string | null
+  createdAt: string
+  reviewer: {
+    id: string
+    name: string
+    avatarUrl: string | null
+  }
+}
+
 export interface PublicProfilePageData {
   user: PublicProfileUserData
   activeAds: ProfileAdItem[]
   viewerCanReviewUser: boolean
   viewerHasReviewedUser: boolean
+  reviews: PublicProfileUserReview[]
 }
