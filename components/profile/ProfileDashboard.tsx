@@ -65,7 +65,7 @@ export default function ProfileDashboard({
         </section>
 
         <section>
-          <h2 className="text-2xl font-semibold mb-4">Itens adquiridos</h2>
+          <h2 className="text-2xl font-semibold mb-4">Itens sob interesse</h2>
           {acquiredItems.length > 0 ? (
             <AdGridPager
               items={acquiredItems}
@@ -74,7 +74,7 @@ export default function ProfileDashboard({
             />
           ) : (
             <p className="text-xl text-muted-foreground">
-              Nenhum item adquirido ainda
+              Nenhum item sob interesse no momento
             </p>
           )}
         </section>
