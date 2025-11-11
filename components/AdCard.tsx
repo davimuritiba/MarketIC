@@ -33,6 +33,8 @@ export default function AdCard({
   actions?: ReactNode
 }) {
   const { icon: Icon, color } = typeConfig[item.type]
+  const reviewCount = item.reviews ?? 0
+  const hasReviews = typeof item.rating === "number" && reviewCount > 0
   return (
     <Card
       className="relative border p-3"
@@ -71,7 +73,7 @@ export default function AdCard({
               <span className="font-bold text-sm">{item.condition}</span>
             )}
           </div>
-          {item.rating !== undefined && (
+          {hasReviews ? (
             <div className="mt-1 flex items-center gap-1 text-xs">
               <div className="flex text-yellow-500">
                 {Array.from({ length: 5 }).map((_, i) => (
@@ -82,10 +84,12 @@ export default function AdCard({
                   />
                 ))}
               </div>
-              {item.reviews !== undefined && (
-                <span className="text-muted-foreground">{item.reviews} avaliações</span>
-              )}
+              <span className="text-muted-foreground">
+                {reviewCount} {reviewCount === 1 ? "avaliação" : "avaliações"}
+              </span>
             </div>
+          ) : (
+            <p className="mt-1 text-xs text-muted-foreground">Não possui avaliações</p>
           )}
         </CardContent>
       </Link>

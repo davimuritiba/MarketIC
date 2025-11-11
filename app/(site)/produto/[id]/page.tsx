@@ -63,6 +63,7 @@ export default async function ProdutoPage({
   }
 
   const isSale = item.tipo_transacao === "VENDA";
+  const isDonation = item.tipo_transacao === "DOACAO";
   const formattedPrice = isSale
     ? item.preco_formatado ??
       (item.preco_centavos != null
@@ -165,7 +166,7 @@ export default async function ProdutoPage({
       },
     })),
     viewerCanReview:
-      Boolean(viewerUserId) && !viewerIsOwner && !viewerHasReview,
+      Boolean(viewerUserId) && !viewerIsOwner && !viewerHasReview && !isDonation,
     viewerHasReview: viewerHasReview,
     viewerIsOwner,
     isInCart: Boolean(cartRecord),

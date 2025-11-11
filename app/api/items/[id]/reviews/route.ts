@@ -56,7 +56,7 @@ export async function POST(
 
   const item = await prisma.item.findUnique({
     where: { id: itemId },
-    select: { id: true, usuario_id: true },
+    select: { id: true, usuario_id: true, tipo_transacao: true },
   });
 
   if (!item) {
@@ -69,6 +69,13 @@ export async function POST(
   if (item.usuario_id === session.usuario_id) {
     return NextResponse.json(
       { error: "Você não pode avaliar o próprio produto." },
+      { status: 400 },
+    );
+  }
+
+  if (item.tipo_transacao === "DOACAO") {
+    return NextResponse.json(
+      { error: "Não é possível avaliar doações." },
       { status: 400 },
     );
   }
