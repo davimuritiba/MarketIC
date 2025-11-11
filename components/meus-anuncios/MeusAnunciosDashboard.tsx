@@ -1,10 +1,13 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useMemo, useState } from "react"
 
 import AdCard, { AdGridPager } from "@/components/AdCard"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import {  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import type { DashboardAdItem, MyAdsData } from "@/types/meus-anuncios"
@@ -57,7 +60,9 @@ export default function MyAdsDashboard({ data }: MyAdsDashboardProps) {
 
         <TabsContent value="finalizados" className="mt-10">
           {counts.finalizados === 0 ? (
-            <EmptyState subtitle="Sem anúncios finalizados no momento." />
+            <EmptyState 
+              title = "Você ainda não possui anúncios finalizados"
+              subtitle="Você pode finalizar anúncios vendidos, doados ou que não deseja mais emprestar." />
           ) : (
             <AdGridPager
               items={data.finalizados}
@@ -72,30 +77,35 @@ export default function MyAdsDashboard({ data }: MyAdsDashboardProps) {
 
         <TabsContent value="inativos" className="mt-10">
           {counts.inativos === 0 ? (
-            <EmptyState subtitle="Você pode inativar anúncios que não deseja exibir temporariamente." />
+            <EmptyState 
+              title = "Você ainda não possui anúncios inativos" 
+              subtitle="Você pode inativar anúncios que não deseja exibir temporariamente." />
           ) : (
-            <AdGridPager
-              items={data.inativos}
-              maxPerPage={4}
-              gridClass="grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-              renderActions={(item) => (
-                <StatusBadge status={(item as DashboardAdItem).statusLabel} />
-              )}
-            />
+            <div className="space-y-6">
+              <ReactivateAdsButton ads={data.inativos} variant="activate" />
+              <AdGridPager
+                items={data.inativos}
+                maxPerPage={4}
+                gridClass="grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                renderActions={(item) => (
+                  <StatusBadge status={(item as DashboardAdItem).statusLabel} />
+                )}
+              />
+            </div>
           )}
         </TabsContent>
 
         <TabsContent value="expirados" className="mt-10">
           {counts.expirados === 0 ? (
-            <EmptyState subtitle="Sem anúncios expirados no momento." />
+            <EmptyState 
+              title = "Você ainda não possui anúncios expirados"
+              subtitle="Os anúncios são expirados automaticamente depois de 2 meses." />
           ) : (
             <div className="space-y-6">
               <p className="text-sm text-neutral-600">
                 Anúncios expirados permanentemente são totalmente excluídos do sistema.
               </p>
-              <Button className="bg-[#1500FF] hover:bg-[#1200d6] px-12 h-10 sm:h-10 text-sm sm:text-base cursor-pointer">
-                Renovar
-              </Button>
+              <ReactivateAdsButton ads={data.expirados} variant="renew" />
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {data.expirados.map((item) => (
                   <div key={item.id} className="space-y-2">
@@ -116,6 +126,164 @@ export default function MyAdsDashboard({ data }: MyAdsDashboardProps) {
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+function ReactivateAdsButton({
+  ads,
+  variant,
+}: {
+  ads: DashboardAdItem[]
+  variant: "activate" | "renew"
+}) {
+  const [open, setOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const router = useRouter()
+
+  const {
+    buttonLabel,
+    dialogTitle,
+    dialogDescription,
+    confirmLabel,
+    loadingLabel,
+  } = useMemo(() => {
+    if (variant === "activate") {
+      return {
+        buttonLabel: "Ativar",
+        dialogTitle: "Ativar anúncios inativos",
+        dialogDescription: "Selecione os anúncios que deseja ativar novamente.",
+        confirmLabel: "Ativar selecionados",
+        loadingLabel: "Ativando...",
+      }
+    }
+
+    return {
+      buttonLabel: "Renovar",
+      dialogTitle: "Renovar anúncios expirados",
+      dialogDescription: "Selecione os anúncios que deseja renovar.",
+      confirmLabel: "Renovar selecionados",
+      loadingLabel: "Renovando...",
+    }
+  }, [variant])
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const clearSelection = () => {
+    setSelectedIds(new Set())
+  }
+
+  const handleConfirm = async () => {
+    if (selectedIds.size === 0 || isSubmitting) {
+      return
+    }
+
+    setIsSubmitting(true)
+    setError(null)
+
+    try {
+      const response = await fetch("/api/items/reactivate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      })
+
+      if (!response.ok) {
+        let message = "Não foi possível atualizar o status dos anúncios."
+        try {
+          const data = await response.json()
+          if (data && typeof data.error === "string" && data.error.trim()) {
+            message = data.error
+          }
+        } catch {
+          // ignore json parse errors
+        }
+        setError(message)
+        return
+      }
+
+      setOpen(false)
+      clearSelection()
+      router.refresh()
+    } catch (fetchError) {
+      console.error("Erro ao reativar anúncios:", fetchError)
+      setError("Erro inesperado ao atualizar os anúncios. Tente novamente.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(value) => {
+      setOpen(value)
+      if (!value) {
+        clearSelection()
+        setError(null)
+        setIsSubmitting(false)
+      }
+    }}>
+      <DialogTrigger asChild>
+        <Button className="bg-[#1500FF] hover:bg-[#1200d6] px-12 h-10 sm:h-10 text-sm sm:text-base cursor-pointer">
+          {buttonLabel}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogDescription>{dialogDescription}</DialogDescription>
+        </DialogHeader>
+
+        <div className="max-h-72 overflow-y-auto rounded-md border">
+          <ul className="divide-y">
+            {ads.map((ad) => (
+              <li key={ad.id} className="flex items-center gap-3 px-4 py-3">
+                <input
+                  id={`reactivate-${variant}-${ad.id}`}
+                  type="checkbox"
+                  className="h-4 w-4 cursor-pointer rounded border-neutral-300"
+                  checked={selectedIds.has(ad.id)}
+                  onChange={() => toggleSelection(ad.id)}
+                  disabled={isSubmitting}
+                />
+                <label
+                  htmlFor={`reactivate-${variant}-${ad.id}`}
+                  className="cursor-pointer text-sm font-medium text-neutral-700"
+                >
+                  {`${ad.title} | ${ad.categoryName ?? "Sem categoria"} | ${ad.type}`}
+                </label>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {error ? (
+          <p className="px-1 text-sm text-red-500">{error}</p>
+        ) : null}
+
+        <DialogFooter>
+          <Button
+            onClick={handleConfirm}
+            className="bg-[#1500FF] hover:bg-[#1200d6] px-6 h-10 text-sm sm:text-base cursor-pointer"
+            disabled={selectedIds.size === 0 || isSubmitting}
+          >
+            {isSubmitting ? loadingLabel : confirmLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

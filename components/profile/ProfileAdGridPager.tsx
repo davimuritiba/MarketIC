@@ -232,8 +232,8 @@ export function ProfileAdGridPager({
             </DialogTitle>
             <DialogDescription>
               {statusTarget?.status === "FINALIZADO"
-                ? "Ao finalizar, o anúncio será marcado como concluído e ficará disponível apenas no histórico."
-                : "Ao inativar, o anúncio deixará de ser exibido nas listas de ativos até que seja reativado."}
+                ? "O anúncio será marcado como concluído e ficará disponível apenas no histórico. Essa ação não pode ser desfeita."
+                : "O anúncio deixará de ser exibido nas listas de ativos até que seja reativado."}
             </DialogDescription>
           </DialogHeader>
           {statusError && (
@@ -256,7 +256,7 @@ export function ProfileAdGridPager({
             </Button>
             <Button
               type="button"
-              className="bg-[#1500FF] hover:bg-[#1200d6] cursor-pointer"
+              className="bg-red-500 hover:bg-red-700 cursor-pointer"
               onClick={handleConfirmStatusChange}
               disabled={isUpdatingStatus}
             >

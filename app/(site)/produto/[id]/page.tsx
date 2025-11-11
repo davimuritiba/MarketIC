@@ -62,6 +62,13 @@ export default async function ProdutoPage({
     notFound();
   }
 
+  const viewerUserId = session?.usuario_id ?? null;
+  const viewerIsOwner = viewerUserId === item.usuario_id;
+
+  if (item.status !== "PUBLICADO" && !viewerIsOwner) {
+    notFound();
+  }
+
   const isSale = item.tipo_transacao === "VENDA";
   const isDonation = item.tipo_transacao === "DOACAO";
   const formattedPrice = isSale
@@ -71,7 +78,6 @@ export default async function ProdutoPage({
         : null)
     : null;
 
-  const viewerUserId = session?.usuario_id ?? null;
   const favoriteRecord = viewerUserId
     ? await prisma.favorito.findUnique({
         where: {
@@ -120,7 +126,6 @@ export default async function ProdutoPage({
       productRatingCount
     : 0;
 
-  const viewerIsOwner = viewerUserId === item.usuario_id;
   const viewerHasReview = viewerUserId
     ? productReviews.some((review) => review.usuario_id === viewerUserId)
     : false;
