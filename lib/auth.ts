@@ -6,6 +6,9 @@ import { prisma } from "@/lib/prisma";
 
 const SESSION_COOKIE_NAME = "session_token";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 dias
+const SESSION_PRUNE_INTERVAL_MS = 1000 * 60 * 5; // 5 minutos
+
+let lastPruneExecution: number | null = null;
 
 export const SESSION_COOKIE = SESSION_COOKIE_NAME;
 
@@ -109,11 +112,24 @@ export async function deleteSession(token: string) {
 }
 
 export async function pruneExpiredSessions() {
-  await prisma.session.deleteMany({
-    where: {
-      expiresAt: {
-        lt: new Date(),
+  const now = Date.now();
+
+  if (
+    typeof lastPruneExecution === "number" &&
+    now - lastPruneExecution < SESSION_PRUNE_INTERVAL_MS
+  ) {
+    return;
+  }
+
+  await prisma.session
+    .deleteMany({
+      where: {
+        expiresAt: {
+          lt: new Date(),
+        },
       },
-    },
-  });
+    })
+    .finally(() => {
+      lastPruneExecution = Date.now();
+    });
 }

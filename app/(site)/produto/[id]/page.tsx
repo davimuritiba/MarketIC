@@ -78,46 +78,42 @@ export default async function ProdutoPage({
         : null)
     : null;
 
-  const favoriteRecord = viewerUserId
-    ? await prisma.favorito.findUnique({
-        where: {
-          usuario_id_anuncio_id: {
-            usuario_id: viewerUserId,
-            anuncio_id: item.id,
+  const [favoriteRecord, cartRecord, interestRecord] = viewerUserId
+    ? await Promise.all([
+        prisma.favorito.findUnique({
+          where: {
+            usuario_id_anuncio_id: {
+              usuario_id: viewerUserId,
+              anuncio_id: item.id,
+            },
           },
-        },
-        select: { id: true },
-      })
-    : null;
-
-  const cartRecord = viewerUserId
-    ? await prisma.carrinhoItem.findUnique({
-        where: {
-          usuario_id_anuncio_id: {
-            usuario_id: viewerUserId,
-            anuncio_id: item.id,
+          select: { id: true },
+        }),
+        prisma.carrinhoItem.findUnique({
+          where: {
+            usuario_id_anuncio_id: {
+              usuario_id: viewerUserId,
+              anuncio_id: item.id,
+            },
           },
-        },
-        select: { id: true },
-      })
-    : null;
-
-  const interestRecord = viewerUserId
-    ? await prisma.interesse.findUnique({
-        where: {
-          usuario_id_anuncio_id: {
-            usuario_id: viewerUserId,
-            anuncio_id: item.id,
+          select: { id: true },
+        }),
+        prisma.interesse.findUnique({
+          where: {
+            usuario_id_anuncio_id: {
+              usuario_id: viewerUserId,
+              anuncio_id: item.id,
+            },
           },
-        },
-        select: {
-          id: true,
-          status: true,
-          share_email: true,
-          share_phone: true,
-        },
-      })
-    : null;
+          select: {
+            id: true,
+            status: true,
+            share_email: true,
+            share_phone: true,
+          },
+        }),
+      ])
+    : [null, null, null];
 
   const productReviews = item.avaliacoes ?? [];
   const productRatingCount = productReviews.length;
