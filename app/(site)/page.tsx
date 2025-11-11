@@ -9,21 +9,12 @@ Depois dessa soma, a lista é reordenada pelo score resultante; empates são des
 import { useEffect, useMemo, useState, type ElementType } from "react";
 import Link from "next/link";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, } from "@/components/ui/select";
-import {
-  Plus,
-  Grid2X2,
-  ShoppingCart,
-  Heart,
-  Smartphone,
-  Cpu,
-  Dumbbell,
-  Guitar,
-  BookOpen,
-  Boxes,
-} from "lucide-react";
+import { Plus, Grid2X2, ShoppingCart, Heart, Smartphone, Cpu, Dumbbell, Guitar, BookOpen, Boxes } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AdGridPager } from "@/components/AdCard";
 import { mapItemToAd, type PrismaItemWithRelations } from "@/lib/ad-mapper";
+
+import type { ProfileUserData } from "@/types/profile";
 
 interface Categoria {
   id: string;
@@ -95,6 +86,7 @@ export default function HomePage() {
   const [estado, setEstado] = useState("");
   const [preco, setPreco] = useState("");
   const [sort, setSort] = useState<SortOption>("recomendado");
+  const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -131,12 +123,7 @@ export default function HomePage() {
             ? error.message
             : "Erro inesperado ao carregar categorias.",
         );
-      } finally {
-        if (active) {
-          setCategoriesLoading(false);
-        }
-      }
-    }
+      }  }
 
     void loadCategories();
 
@@ -221,6 +208,29 @@ export default function HomePage() {
     };
   }, [estado, preco, selectedCategoryId, sort, tipo]);
 
+  useEffect(() => {
+    let active = true;
+
+    async function loadProfileName() {
+      try {
+        const response = await fetch("/api/profile", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!active) return;
+        if (data?.user?.nome) {
+          setUserName(data.user.nome);
+        }
+      } catch (error) {
+      }
+    }
+
+    void loadProfileName();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const adItems = useMemo(() => items.map((item) => mapItemToAd(item)), [items]);
 
   const categoryKeyById = useMemo(() => {
@@ -285,7 +295,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-semibold">Olá, Usuário</h1>
+      <h1 className="text-3xl font-semibold">Olá, {userName}</h1>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {actions.map(({ label, href, icon: Icon }) => (

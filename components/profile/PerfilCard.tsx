@@ -13,10 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "
 import { Calendar, GraduationCap, IdCard, Mail, Phone, Star } from "lucide-react";
 
 import { resolveCourseLabel } from "@/lib/course-labels";
-import {
-  formatBrazilianPhone,
-  normalizeBrazilianPhone,
-} from "@/lib/phone";
+import { formatBrazilianPhone, normalizeBrazilianPhone, } from "@/lib/phone";
 
 export interface CourseOption {
   value: string;
