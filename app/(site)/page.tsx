@@ -9,7 +9,7 @@ Depois dessa soma, a lista é reordenada pelo score resultante; empates são des
 import { useEffect, useMemo, useState, type ElementType } from "react";
 import Link from "next/link";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, } from "@/components/ui/select";
-import { Plus, Grid2X2, ShoppingCart, Heart, Smartphone, Cpu, Dumbbell, Guitar, BookOpen, Boxes } from "lucide-react";
+import { Plus, Grid2X2, ShoppingCart, Heart, Smartphone, Cpu, Dumbbell, Guitar, BookOpen, Boxes, Mail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AdGridPager } from "@/components/AdCard";
 import { mapItemToAd, type PrismaItemWithRelations } from "@/lib/ad-mapper";
@@ -283,6 +283,7 @@ export default function HomePage() {
     { label: "Meus Anúncios", href: "/meus-anuncios", icon: Grid2X2 },
     { label: "Meu Carrinho", href: "/carrinho", icon: ShoppingCart },
     { label: "Favoritos", href: "/favoritos", icon: Heart },
+    { label: "Mensagens", href: "/mensagens", icon: Mail },
   ];
 
   const selectedCategoryName = useMemo(() => {
