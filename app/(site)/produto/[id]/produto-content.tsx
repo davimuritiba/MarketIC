@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage, } from "@/components/ui/avatar";
+import { ReviewActionsMenu } from "@/components/reviews/ReviewActionsMenu";
 import { formatBrazilianPhone } from "@/lib/phone";
 
 export type TransactionType = "VENDA" | "EMPRESTIMO" | "DOACAO";
@@ -70,6 +71,8 @@ export interface ProductReview {
     name: string;
     avatarUrl: string | null;
   };
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
 interface ProdutoPageClientProps {
@@ -124,6 +127,9 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
   const [reviewComment, setReviewComment] = useState("");
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [isSubmittingReview, startSubmitReview] = useTransition();
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [pendingReviewId, setPendingReviewId] = useState<string | null>(null);
+  const isEditingReview = editingReviewId != null;
   const [interestError, setInterestError] = useState<string | null>(null);
   const [interestStatus, setInterestStatus] = useState<InterestStatus | null>(
     product.viewerInterestStatus ?? null,
@@ -376,13 +382,153 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
     setReviewTitle("");
     setReviewComment("");
     setReviewError(null);
+    setEditingReviewId(null);
   };
 
   const handleReviewDialogChange = (open: boolean) => {
-    if (!open && !isSubmittingReview) {
-      resetReviewForm();
+    if (!open) {
+      if (!isSubmittingReview) {
+        resetReviewForm();
+      } else {
+        setEditingReviewId(null);
+      }
+      setReviewError(null);
     }
     setIsReviewDialogOpen(open);
+  };
+
+  const handleDeleteDialogChange = (open: boolean) => {
+    if (
+      !open &&
+      pendingReviewId != null &&
+      reviewToDelete &&
+      pendingReviewId === reviewToDelete.id
+    ) {
+      return;
+    }
+
+    setIsDeleteDialogOpen(open);
+    if (!open) {
+      setReviewToDelete(null);
+    }
+  };
+
+  const parseProductReview = (raw: unknown): ProductReview | null => {
+    if (!raw || typeof raw !== "object") {
+      return null;
+    }
+
+    const review = raw as Record<string, unknown>;
+    const id = typeof review.id === "string" ? review.id : null;
+    const ratingValue =
+      typeof review.rating === "number" ? review.rating : null;
+    const createdAt =
+      typeof review.createdAt === "string" ? review.createdAt : null;
+    const reviewerRaw = review.reviewer;
+
+    if (!id || ratingValue == null || !createdAt || !reviewerRaw) {
+      return null;
+    }
+
+    if (typeof reviewerRaw !== "object") {
+      return null;
+    }
+
+    const reviewerRecord = reviewerRaw as Record<string, unknown>;
+    const reviewerId =
+      typeof reviewerRecord.id === "string" ? reviewerRecord.id : null;
+    const reviewerName =
+      typeof reviewerRecord.name === "string" ? reviewerRecord.name : null;
+
+    if (!reviewerId || !reviewerName) {
+      return null;
+    }
+
+    const canEdit = typeof review.canEdit === "boolean" ? review.canEdit : false;
+    const canDelete =
+      typeof review.canDelete === "boolean" ? review.canDelete : false;
+
+    return {
+      id,
+      rating: ratingValue,
+      title: typeof review.title === "string" ? review.title : null,
+      comment: typeof review.comment === "string" ? review.comment : null,
+      createdAt,
+      reviewer: {
+        id: reviewerId,
+        name: reviewerName,
+        avatarUrl:
+          typeof reviewerRecord.avatarUrl === "string"
+            ? reviewerRecord.avatarUrl
+            : null,
+      },
+      canEdit,
+      canDelete,
+    };
+  };
+
+  const handleStartEditReview = (review: ProductReview) => {
+    if (!review.canEdit || pendingReviewId) {
+      return;
+    }
+
+    setSelectedRating(review.rating);
+    setReviewTitle(review.title ?? "");
+    setReviewComment(review.comment ?? "");
+    setReviewError(null);
+    setEditingReviewId(review.id);
+    setIsReviewDialogOpen(true);
+  };
+
+  const handleRequestDeleteReview = (review: ProductReview) => {
+    if (!review.canDelete || pendingReviewId) {
+      return;
+    }
+
+    setReviewToDelete(review);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteReview = async () => {
+    if (!reviewToDelete || !reviewToDelete.canDelete || pendingReviewId) {
+      return;
+    }
+
+    setPendingReviewId(reviewToDelete.id);
+    setReviewError(null);
+
+    try {
+      const response = await fetch(
+        `/api/items/${product.id}/reviews/${reviewToDelete.id}`,
+        { method: "DELETE" },
+      );
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        const message =
+          payload && typeof payload.error === "string"
+            ? payload.error
+            : "Não foi possível excluir a avaliação.";
+        setReviewError(message);
+        return;
+      }
+
+      setReviews((previous) =>
+        previous.filter((item) => item.id !== reviewToDelete.id),
+      );
+      setCanReview(true);
+      setHasSubmittedReview(false);
+      if (editingReviewId === reviewToDelete.id) {
+        resetReviewForm();
+      }
+    } catch (error) {
+      console.error("Erro ao excluir avaliação do produto", error);
+      setReviewError("Não foi possível excluir a avaliação.");
+    } finally {
+      setPendingReviewId(null);
+      setIsDeleteDialogOpen(false);
+      setReviewToDelete(null);
+    }
   };
 
   const handleSubmitReview = (event: React.FormEvent<HTMLFormElement>) => {
@@ -397,8 +543,12 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
       try {
         setReviewError(null);
 
-        const response = await fetch(`/api/items/${product.id}/reviews`, {
-          method: "POST",
+        const endpoint = isEditingReview
+          ? `/api/items/${product.id}/reviews/${editingReviewId}`
+          : `/api/items/${product.id}/reviews`;
+
+        const response = await fetch(endpoint, {
+          method: isEditingReview ? "PATCH" : "POST",
           headers: {
             "Content-Type": "application/json",
           },
@@ -409,29 +559,53 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
           }),
         });
 
+        const payload = await response.json().catch(() => null);
+
         if (!response.ok) {
-          const payload = await response.json().catch(() => null);
-          const message = payload?.error ?? "Não foi possível enviar sua avaliação.";
+          const message =
+            payload?.error ??
+            (isEditingReview
+              ? "Não foi possível atualizar a avaliação."
+              : "Não foi possível enviar sua avaliação.");
           setReviewError(message);
           return;
         }
 
-        const payload = await response.json().catch(() => null);
-        const createdReview: ProductReview | undefined = payload?.review;
+        const parsedReview = parseProductReview(payload?.review);
 
-        if (!createdReview) {
+        if (!parsedReview) {
           setReviewError("Resposta inesperada do servidor.");
           return;
         }
 
-        setReviews((previous) => [createdReview, ...previous]);
-        setCanReview(false);
-        setHasSubmittedReview(true);
+        if (isEditingReview) {
+          setReviews((previous) =>
+            previous.map((item) =>
+              item.id === parsedReview.id ? parsedReview : item,
+            ),
+          );
+          setCanReview(false);
+          setHasSubmittedReview(true);
+        } else {
+          setReviews((previous) => [parsedReview, ...previous]);
+          setCanReview(false);
+          setHasSubmittedReview(true);
+        }
+
         resetReviewForm();
         setIsReviewDialogOpen(false);
       } catch (error) {
-        console.error("Erro ao enviar avaliação", error);
-        setReviewError("Erro inesperado ao enviar avaliação. Tente novamente.");
+        console.error(
+          isEditingReview
+            ? "Erro ao atualizar avaliação"
+            : "Erro ao enviar avaliação",
+          error,
+        );
+        setReviewError(
+          isEditingReview
+            ? "Erro inesperado ao atualizar a avaliação. Tente novamente."
+            : "Erro inesperado ao enviar avaliação. Tente novamente.",
+        );
       }
     });
   };
@@ -663,29 +837,9 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
         <div>
           <h3 className="text-2xl font-semibold">Informações Adicionais</h3>
           <p className="text-base text-muted-foreground">
-            {product.title
-              ? `Título: ${product.title}`
-              : "Título ategoria não disponível."}
-          </p>
-          <p className="text-base text-muted-foreground">
             {product.categoryName
               ? `Categoria: ${product.categoryName}`
-              : "Categoria não disponível."}
-          </p>
-          <p className="text-base text-muted-foreground">
-            {product.transactionType
-              ? `Tipo de transação: ${product.transactionType}`
-              : "Tipo de transação não disponível."}
-          </p>
-          <p className="text-base text-muted-foreground">
-            {product.condition
-              ? `Conservação: ${product.condition}`
-              : "Estado de conservação não disponível."}
-          </p>
-          <p className="text-base text-muted-foreground">
-            {product.quantity
-              ? `Quantidade: ${product.quantity}`
-              : "Quantidade não disponível."}
+              : "\"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\""}
           </p>
         </div>
         <div>
@@ -703,7 +857,11 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
               variant="outline"
               size="sm"
               className="mt-3 cursor-pointer"
-              onClick={() => setIsReviewDialogOpen(true)}
+              onClick={() => {
+                resetReviewForm();
+                setReviewError(null);
+                setIsReviewDialogOpen(true);
+              }}
             >
               Avaliar produto
             </Button>
@@ -722,26 +880,35 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
             {reviews.length ? (
               reviews.map((review) => (
                 <div key={review.id} className="rounded-md border border-gray-200 p-4 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarImage
-                        src={review.reviewer.avatarUrl ?? undefined}
-                        alt={`Avatar de ${review.reviewer.name}`}
-                      />
-                      <AvatarFallback>
-                        {review.reviewer.name.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-base font-semibold">{review.reviewer.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(review.createdAt).toLocaleDateString("pt-BR", {
-                          day: "2-digit",
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <Avatar>
+                        <AvatarImage
+                          src={review.reviewer.avatarUrl ?? undefined}
+                          alt={`Avatar de ${review.reviewer.name}`}
+                        />
+                        <AvatarFallback>
+                          {review.reviewer.name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-base font-semibold">{review.reviewer.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(review.createdAt).toLocaleDateString("pt-BR", {
+                            day: "2-digit",
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </p>
+                      </div>
                     </div>
+                    <ReviewActionsMenu
+                      canEdit={review.canEdit}
+                      canDelete={review.canDelete}
+                      onEdit={() => handleStartEditReview(review)}
+                      onDelete={() => handleRequestDeleteReview(review)}
+                      disabled={isSubmittingReview || pendingReviewId === review.id}
+                    />
                   </div>
                   {renderReviewStars(review.rating)}
                   {review.title ? (
@@ -766,9 +933,13 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
       <Dialog open={isReviewDialogOpen} onOpenChange={handleReviewDialogChange}>
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
-            <DialogTitle>Avaliar produto</DialogTitle>
+            <DialogTitle>
+              {isEditingReview ? "Editar avaliação" : "Avaliar produto"}
+            </DialogTitle>
             <DialogDescription>
-              Compartilhe sua opinião com outros usuários da plataforma.
+              {isEditingReview
+                ? "Atualize as informações da sua avaliação sobre o produto."
+                : "Compartilhe sua opinião com outros usuários da plataforma."}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmitReview} className="space-y-4">
@@ -831,11 +1002,52 @@ export default function ProdutoPageClient({ product }: ProdutoPageClientProps) {
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmittingReview} className="bg-[#1500FF] hover:bg-[#1200d6] cursor-pointer">
-                {isSubmittingReview ? "Enviando..." : "Enviar avaliação"}
+              <Button
+                type="submit"
+                disabled={isSubmittingReview}
+                className="bg-[#1500FF] hover:bg-[#1200d6] cursor-pointer"
+              >
+                {isSubmittingReview
+                  ? isEditingReview
+                    ? "Salvando..."
+                    : "Enviando..."
+                  : isEditingReview
+                    ? "Salvar alterações"
+                    : "Enviar avaliação"}
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isDeleteDialogOpen} onOpenChange={handleDeleteDialogChange}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Tem certeza que deseja excluir a avaliação?</DialogTitle>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="cursor-pointer"
+              onClick={() => handleDeleteDialogChange(false)}
+              disabled={pendingReviewId != null}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="cursor-pointer"
+              onClick={handleDeleteReview}
+              disabled={
+                reviewToDelete == null ||
+                (pendingReviewId != null &&
+                  pendingReviewId === reviewToDelete.id)
+              }
+            >
+              Excluir
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

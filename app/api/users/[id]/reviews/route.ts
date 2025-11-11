@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 
 import { getSession } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { computeReviewPermissions } from "@/lib/review-permissions"
 
 export async function POST(
   request: Request,
@@ -126,6 +127,12 @@ export async function POST(
       }
     })
 
+    const permissions = computeReviewPermissions({
+      viewerId: session.usuario_id,
+      authorId: result.review.avaliador_id,
+      createdAt: result.review.data,
+    })
+
     return NextResponse.json(
       {
         review: {
@@ -139,6 +146,8 @@ export async function POST(
             name: session.usuario!.nome,
             avatarUrl: session.usuario!.foto_documento_url ?? null,
           },
+          canEdit: permissions.canEdit,
+          canDelete: permissions.canDelete,
         },
         rating: result.rating,
         ratingCount: result.ratingCount,

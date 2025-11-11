@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { computeReviewPermissions } from "@/lib/review-permissions";
 
 export async function POST(
   request: Request,
@@ -115,6 +116,12 @@ export async function POST(
       },
     });
 
+    const permissions = computeReviewPermissions({
+      viewerId: session.usuario_id,
+      authorId: review.usuario_id,
+      createdAt: review.data,
+    });
+
     return NextResponse.json(
       {
         review: {
@@ -128,6 +135,8 @@ export async function POST(
             name: review.usuario.nome,
             avatarUrl: review.usuario.foto_documento_url ?? null,
           },
+          canEdit: permissions.canEdit,
+          canDelete: permissions.canDelete,
         },
       },
       { status: 201 },

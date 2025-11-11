@@ -3,11 +3,13 @@ import { buildCourseOptionsFromCodes } from "@/lib/course"
 import { resolveItemStatus, type StatusSource } from "@/lib/item-status"
 import { prisma } from "@/lib/prisma"
 import { refreshExpiredItemsForUser } from "@/lib/status-service"
+import { computeReviewPermissions } from "@/lib/review-permissions"
 
 import type {
   ProfileAdItem,
   ProfilePageData,
   PublicProfilePageData,
+  UserReview,
 } from "@/types/profile"
 
 const MAX_ACTIVE_AND_ACQUIRED = 12
@@ -29,7 +31,7 @@ function mapItemToProfileAd(item: ProfileItem): ProfileAdItem {
 export async function getProfilePageData(userId: string): Promise<ProfilePageData> {
   await refreshExpiredItemsForUser(userId)
 
-  const [usuario, allAds, acquiredInterests, courseRecords] =
+  const [usuario, allAds, acquiredInterests, courseRecords, userReviews] =
     await prisma.$transaction([
       prisma.usuario.findUnique({
         where: { id: userId },
@@ -87,6 +89,19 @@ export async function getProfilePageData(userId: string): Promise<ProfilePageDat
         select: { curso: true },
         distinct: ["curso"],
       }),
+      prisma.avaliacaoUsuario.findMany({
+        where: { avaliado_id: userId },
+        include: {
+          avaliador: {
+            select: {
+              id: true,
+              nome: true,
+              foto_documento_url: true,
+            },
+          },
+        },
+        orderBy: { data: "desc" },
+      }),
     ])
 
   if (!usuario) {
@@ -140,6 +155,28 @@ export async function getProfilePageData(userId: string): Promise<ProfilePageDat
     historyAds: profileAds,
     acquiredItems: acquiredItems.map(mapItemToAd),
     courses: courseOptions,
+    reviews: (userReviews ?? []).map((review) => {
+      const permissions = computeReviewPermissions({
+        viewerId: userId,
+        authorId: review.avaliador_id,
+        createdAt: review.data,
+      })
+
+      return {
+        id: review.id,
+        rating: review.nota,
+        title: review.titulo ?? null,
+        comment: review.comentario ?? null,
+        createdAt: review.data.toISOString(),
+        reviewer: {
+          id: review.avaliador.id,
+          name: review.avaliador.nome,
+          avatarUrl: review.avaliador.foto_documento_url ?? null,
+        },
+        canEdit: permissions.canEdit,
+        canDelete: permissions.canDelete,
+      }
+    }),
   }
 }
 
@@ -234,17 +271,27 @@ export async function getPublicProfilePageData(
     activeAds: activeAdsItems.map((item) => ({ ...item })),
     viewerCanReviewUser,
     viewerHasReviewedUser,
-    reviews: userReviews.map((review) => ({
-      id: review.id,
-      rating: review.nota,
-      title: review.titulo ?? null,
-      comment: review.comentario ?? null,
-      createdAt: review.data.toISOString(),
-      reviewer: {
-        id: review.avaliador.id,
-        name: review.avaliador.nome,
-        avatarUrl: review.avaliador.foto_documento_url ?? null,
-      },
-    })),
+    reviews: userReviews.map((review) => {
+      const permissions = computeReviewPermissions({
+        viewerId: viewerUserId ?? null,
+        authorId: review.avaliador_id,
+        createdAt: review.data,
+      })
+
+      return {
+        id: review.id,
+        rating: review.nota,
+        title: review.titulo ?? null,
+        comment: review.comentario ?? null,
+        createdAt: review.data.toISOString(),
+        reviewer: {
+          id: review.avaliador.id,
+          name: review.avaliador.nome,
+          avatarUrl: review.avaliador.foto_documento_url ?? null,
+        },
+        canEdit: permissions.canEdit,
+        canDelete: permissions.canDelete,
+      } satisfies UserReview
+    }),
   }
 }

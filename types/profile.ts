@@ -30,12 +30,28 @@ export interface ProfileUserData {
   rg: string
 }
 
+export interface UserReview {
+  id: string
+  rating: number
+  title: string | null
+  comment: string | null
+  createdAt: string
+  reviewer: {
+    id: string
+    name: string
+    avatarUrl: string | null
+  }
+  canEdit: boolean
+  canDelete: boolean
+}
+
 export interface ProfilePageData {
   user: ProfileUserData
   activeAds: ProfileAdItem[]
   historyAds: ProfileAdItem[]
   acquiredItems: CardAdItem[]
   courses: CourseOption[]
+  reviews: UserReview[]
 }
 
 export interface PublicProfileUserData {
@@ -48,23 +64,10 @@ export interface PublicProfileUserData {
   reputacaoCount: number
 }
 
-export interface PublicProfileUserReview {
-  id: string
-  rating: number
-  title: string | null
-  comment: string | null
-  createdAt: string
-  reviewer: {
-    id: string
-    name: string
-    avatarUrl: string | null
-  }
-}
-
 export interface PublicProfilePageData {
   user: PublicProfileUserData
   activeAds: ProfileAdItem[]
   viewerCanReviewUser: boolean
   viewerHasReviewedUser: boolean
-  reviews: PublicProfileUserReview[]
+  reviews: UserReview[]
 }

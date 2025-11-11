@@ -11,11 +11,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { ReviewActionsMenu } from "@/components/reviews/ReviewActionsMenu"
 
 import { resolveCourseLabel } from "@/lib/course-labels"
 import type {
   PublicProfileUserData,
-  PublicProfileUserReview,
+  UserReview,
 } from "@/types/profile"
 
 const REVIEW_PREVIEW_LIMIT = 3
@@ -63,7 +64,7 @@ type PublicProfileCardProps = {
   user: PublicProfileUserData
   viewerCanReviewUser: boolean
   viewerHasReviewedUser: boolean
-  reviews: PublicProfileUserReview[]
+  reviews: UserReview[]
 }
 
 export default function PublicProfileCard({
@@ -87,7 +88,11 @@ export default function PublicProfileCard({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const [userReviews, setUserReviews] = useState(reviews)
+  const [userReviews, setUserReviews] = useState<UserReview[]>(reviews)
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null)
+  const [pendingReviewId, setPendingReviewId] = useState<string | null>(null)
+  const [reviewToDelete, setReviewToDelete] = useState<UserReview | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
   useEffect(() => {
     setUserReviews(reviews)
@@ -99,11 +104,167 @@ export default function PublicProfileCard({
   )
   const hasMoreReviews = userReviews.length > REVIEW_PREVIEW_LIMIT
   const reviewStars = useMemo(() => Array.from({ length: 5 }), [])
+  const isEditingReview = editingReviewId != null
+
+  const parseReviewResponse = (raw: unknown): UserReview | null => {
+    if (!raw || typeof raw !== "object") {
+      return null
+    }
+
+    const review = raw as Record<string, unknown>
+    const id = typeof review.id === "string" ? review.id : null
+    const ratingValue =
+      typeof review.rating === "number" ? review.rating : null
+    const createdAt =
+      typeof review.createdAt === "string" ? review.createdAt : null
+    const reviewerRaw = review.reviewer
+
+    if (!id || ratingValue == null || !createdAt || !reviewerRaw) {
+      return null
+    }
+
+    if (typeof reviewerRaw !== "object") {
+      return null
+    }
+
+    const reviewerRecord = reviewerRaw as Record<string, unknown>
+    const reviewerId =
+      typeof reviewerRecord.id === "string" ? reviewerRecord.id : null
+    const reviewerName =
+      typeof reviewerRecord.name === "string" ? reviewerRecord.name : null
+
+    if (!reviewerId || !reviewerName) {
+      return null
+    }
+
+    const canEdit = typeof review.canEdit === "boolean" ? review.canEdit : false
+    const canDelete =
+      typeof review.canDelete === "boolean" ? review.canDelete : false
+
+    return {
+      id,
+      rating: ratingValue,
+      title: typeof review.title === "string" ? review.title : null,
+      comment: typeof review.comment === "string" ? review.comment : null,
+      createdAt,
+      reviewer: {
+        id: reviewerId,
+        name: reviewerName,
+        avatarUrl:
+          typeof reviewerRecord.avatarUrl === "string"
+            ? reviewerRecord.avatarUrl
+            : null,
+      },
+      canEdit,
+      canDelete,
+    }
+  }
+
+  const resetReviewForm = () => {
+    setSelectedRating(null)
+    setReviewTitle("")
+    setReviewComment("")
+    setEditingReviewId(null)
+  }
 
   const handleDialogChange = (open: boolean) => {
     setIsDialogOpen(open)
     if (!open) {
       setErrorMessage(null)
+      resetReviewForm()
+    }
+  }
+
+  const handleDeleteDialogChange = (open: boolean) => {
+    if (
+      !open &&
+      pendingReviewId != null &&
+      reviewToDelete &&
+      pendingReviewId === reviewToDelete.id
+    ) {
+      return
+    }
+
+    setIsDeleteDialogOpen(open)
+    if (!open) {
+      setReviewToDelete(null)
+    }
+  }
+
+  const handleStartEditReview = (review: UserReview) => {
+    if (!review.canEdit || pendingReviewId) {
+      return
+    }
+
+    setSelectedRating(review.rating)
+    setReviewTitle(review.title ?? "")
+    setReviewComment(review.comment ?? "")
+    setErrorMessage(null)
+    setSuccessMessage(null)
+    setEditingReviewId(review.id)
+    setIsDialogOpen(true)
+  }
+
+  const handleRequestDeleteReview = (review: UserReview) => {
+    if (!review.canDelete || pendingReviewId) {
+      return
+    }
+
+    setReviewToDelete(review)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleDeleteReview = async () => {
+    if (!reviewToDelete || !reviewToDelete.canDelete || pendingReviewId) {
+      return
+    }
+
+    setPendingReviewId(reviewToDelete.id)
+    setErrorMessage(null)
+
+    try {
+      const response = await fetch(
+        `/api/users/${user.id}/reviews/${reviewToDelete.id}`,
+        {
+          method: "DELETE",
+        },
+      )
+
+      const payload = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        const message =
+          payload && typeof payload.error === "string"
+            ? payload.error
+            : "Não foi possível excluir a avaliação."
+        setErrorMessage(message)
+        return
+      }
+
+      const updatedRating =
+        payload && typeof payload.rating === "number"
+          ? payload.rating
+          : rating
+      const updatedRatingCount =
+        payload && typeof payload.ratingCount === "number"
+          ? payload.ratingCount
+          : ratingCount
+
+      setRating(updatedRating)
+      setRatingCount(updatedRatingCount)
+      setUserReviews((previous) =>
+        previous.filter((item) => item.id !== reviewToDelete.id),
+      )
+      setSuccessMessage("Avaliação excluída com sucesso.")
+      setHasReviewed(false)
+      setCanReview(true)
+    } catch (error) {
+      console.error("Erro ao excluir avaliação do usuário", error)
+      setErrorMessage("Não foi possível excluir a avaliação.")
+    } finally {
+      setPendingReviewId(null)
+      setIsDeleteDialogOpen(false)
+      setReviewToDelete(null)
     }
   }
 
@@ -119,8 +280,12 @@ export default function PublicProfileCard({
     setErrorMessage(null)
 
     try {
-      const response = await fetch(`/api/users/${user.id}/reviews`, {
-        method: "POST",
+      const url = isEditingReview
+        ? `/api/users/${user.id}/reviews/${editingReviewId}`
+        : `/api/users/${user.id}/reviews`
+
+      const response = await fetch(url, {
+        method: isEditingReview ? "PATCH" : "POST",
         headers: {
           "Content-Type": "application/json",
         },
@@ -137,7 +302,9 @@ export default function PublicProfileCard({
         const message =
           payload && typeof payload.error === "string"
             ? payload.error
-            : "Não foi possível registrar a avaliação."
+            : isEditingReview
+              ? "Não foi possível atualizar a avaliação."
+              : "Não foi possível registrar a avaliação."
         setErrorMessage(message)
         return
       }
@@ -151,73 +318,50 @@ export default function PublicProfileCard({
           ? payload.ratingCount
           : ratingCount
 
-      const createdReview = (() => {
-        const review = payload?.review
-        if (!review || typeof review !== "object") {
-          return null
+      if (isEditingReview) {
+        const updatedReview = parseReviewResponse(payload?.review)
+
+        if (!updatedReview) {
+          setErrorMessage("Resposta inesperada do servidor.")
+          return
         }
 
-        const id = "id" in review ? String(review.id) : null
-        const ratingValue =
-          "rating" in review && typeof review.rating === "number"
-            ? review.rating
-            : null
-        const createdAt =
-          "createdAt" in review && typeof review.createdAt === "string"
-            ? review.createdAt
-            : null
-        const reviewer =
-          "reviewer" in review &&
-          review.reviewer &&
-          typeof review.reviewer === "object" &&
-          "id" in review.reviewer &&
-          "name" in review.reviewer
-            ? {
-                id: String(review.reviewer.id),
-                name: String(review.reviewer.name),
-                avatarUrl:
-                  "avatarUrl" in review.reviewer &&
-                  typeof review.reviewer.avatarUrl === "string"
-                    ? review.reviewer.avatarUrl
-                    : null,
-              }
-            : null
-
-        if (!id || ratingValue == null || !createdAt || !reviewer) {
-          return null
+        setRating(updatedRating)
+        setRatingCount(updatedRatingCount)
+        setCanReview(false)
+        setHasReviewed(true)
+        setUserReviews((previous) =>
+          previous.map((item) =>
+            item.id === updatedReview.id ? updatedReview : item,
+          ),
+        )
+        setSuccessMessage("Avaliação atualizada com sucesso!")
+      } else {
+        const createdReview = parseReviewResponse(payload?.review)
+        setRating(updatedRating)
+        setRatingCount(updatedRatingCount)
+        setCanReview(false)
+        setHasReviewed(true)
+        setSuccessMessage("Avaliação enviada com sucesso!")
+        if (createdReview) {
+          setUserReviews((previous) => [createdReview, ...previous])
         }
-
-        return {
-          id,
-          rating: ratingValue,
-          title:
-            "title" in review && typeof review.title === "string"
-              ? review.title
-              : null,
-          comment:
-            "comment" in review && typeof review.comment === "string"
-              ? review.comment
-              : null,
-          createdAt,
-          reviewer,
-        } satisfies PublicProfileUserReview
-      })()
-
-      setRating(updatedRating)
-      setRatingCount(updatedRatingCount)
-      setCanReview(false)
-      setHasReviewed(true)
-      setSuccessMessage("Avaliação enviada com sucesso!")
-      setIsDialogOpen(false)
-      setSelectedRating(null)
-      setReviewTitle("")
-      setReviewComment("")
-      if (createdReview) {
-        setUserReviews((previous) => [createdReview, ...previous])
       }
+
+      setIsDialogOpen(false)
+      resetReviewForm()
     } catch (error) {
-      console.error("Erro ao registrar avaliação do usuário", error)
-      setErrorMessage("Não foi possível registrar a avaliação.")
+      console.error(
+        isEditingReview
+          ? "Erro ao atualizar avaliação do usuário"
+          : "Erro ao registrar avaliação do usuário",
+        error,
+      )
+      setErrorMessage(
+        isEditingReview
+          ? "Não foi possível atualizar a avaliação."
+          : "Não foi possível registrar a avaliação.",
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -304,10 +448,9 @@ export default function PublicProfileCard({
               size="sm"
               className="cursor-pointer"
               onClick={() => {
-                setSelectedRating(null)
-                setReviewTitle("")
-                setReviewComment("")
+                resetReviewForm()
                 setErrorMessage(null)
+                setSuccessMessage(null)
                 setIsDialogOpen(true)
               }}
             >
@@ -325,24 +468,33 @@ export default function PublicProfileCard({
             <div className="space-y-6">
               {previewReviews.map((review) => (
                 <article key={review.id} className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage
-                        src={review.reviewer.avatarUrl ?? undefined}
-                        alt={`Avatar de ${review.reviewer.name}`}
-                      />
-                      <AvatarFallback>
-                        {getInitials(review.reviewer.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-semibold text-neutral-800">
-                        {review.reviewer.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatReviewDate(review.createdAt)}
-                      </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage
+                          src={review.reviewer.avatarUrl ?? undefined}
+                          alt={`Avatar de ${review.reviewer.name}`}
+                        />
+                        <AvatarFallback>
+                          {getInitials(review.reviewer.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-semibold text-neutral-800">
+                          {review.reviewer.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatReviewDate(review.createdAt)}
+                        </p>
+                      </div>
                     </div>
+                    <ReviewActionsMenu
+                      canEdit={review.canEdit}
+                      canDelete={review.canDelete}
+                      onEdit={() => handleStartEditReview(review)}
+                      onDelete={() => handleRequestDeleteReview(review)}
+                      disabled={isSubmitting || pendingReviewId === review.id}
+                    />
                   </div>
                   <div className="flex items-center gap-1 text-yellow-500">
                     {reviewStars.map((_, index) => (
@@ -395,9 +547,13 @@ export default function PublicProfileCard({
       <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
-            <DialogTitle>Avaliar usuário</DialogTitle>
+            <DialogTitle>
+              {isEditingReview ? "Editar avaliação" : "Avaliar usuário"}
+            </DialogTitle>
             <DialogDescription>
-              Compartilhe sua experiência com outros compradores.
+              {isEditingReview
+                ? "Atualize as informações da sua avaliação."
+                : "Compartilhe sua experiência com outros compradores."}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmitReview} className="space-y-4">
@@ -457,11 +613,55 @@ export default function PublicProfileCard({
               <p className="text-sm text-destructive">{errorMessage}</p>
             ) : null}
             <DialogFooter>
-              <Button type="submit" disabled={isSubmitting} className="bg-[#1500FF] hover:bg-[#1200d6] cursor-pointer">
-                {isSubmitting ? "Enviando..." : "Enviar avaliação"}
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-[#1500FF] hover:bg-[#1200d6] cursor-pointer"
+              >
+                {isSubmitting
+                  ? isEditingReview
+                    ? "Salvando..."
+                    : "Enviando..."
+                  : isEditingReview
+                    ? "Salvar alterações"
+                    : "Enviar avaliação"}
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isDeleteDialogOpen} onOpenChange={handleDeleteDialogChange}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Tem certeza que deseja excluir a avaliação?</DialogTitle>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="cursor-pointer"
+              onClick={() => handleDeleteDialogChange(false)}
+              disabled={
+                pendingReviewId != null &&
+                pendingReviewId === reviewToDelete?.id
+              }
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="cursor-pointer"
+              onClick={handleDeleteReview}
+              disabled={
+                reviewToDelete == null ||
+                (pendingReviewId != null &&
+                  pendingReviewId === reviewToDelete.id)
+              }
+            >
+              Excluir
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       <Dialog open={isReviewListOpen} onOpenChange={setIsReviewListOpen}>
@@ -476,24 +676,33 @@ export default function PublicProfileCard({
             {userReviews.length ? (
               userReviews.map((review) => (
                 <article key={review.id} className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage
-                        src={review.reviewer.avatarUrl ?? undefined}
-                        alt={`Avatar de ${review.reviewer.name}`}
-                      />
-                      <AvatarFallback>
-                        {getInitials(review.reviewer.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-semibold text-neutral-800">
-                        {review.reviewer.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatReviewDate(review.createdAt)}
-                      </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage
+                          src={review.reviewer.avatarUrl ?? undefined}
+                          alt={`Avatar de ${review.reviewer.name}`}
+                        />
+                        <AvatarFallback>
+                          {getInitials(review.reviewer.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-semibold text-neutral-800">
+                          {review.reviewer.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatReviewDate(review.createdAt)}
+                        </p>
+                      </div>
                     </div>
+                    <ReviewActionsMenu
+                      canEdit={review.canEdit}
+                      canDelete={review.canDelete}
+                      onEdit={() => handleStartEditReview(review)}
+                      onDelete={() => handleRequestDeleteReview(review)}
+                      disabled={isSubmitting || pendingReviewId === review.id}
+                    />
                   </div>
                   <div className="flex items-center gap-1 text-yellow-500">
                     {reviewStars.map((_, index) => (

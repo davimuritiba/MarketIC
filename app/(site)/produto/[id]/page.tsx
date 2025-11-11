@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { computeReviewPermissions } from "@/lib/review-permissions";
 
 import ProdutoPageClient, {
   type ProductData,
@@ -154,18 +155,28 @@ export default async function ProdutoPage({
       Boolean(viewerUserId) && item.usuario_id !== viewerUserId,
     productRating,
     productRatingCount,
-    reviews: productReviews.map((review) => ({
-      id: review.id,
-      rating: review.nota,
-      title: review.titulo,
-      comment: review.comentario,
-      createdAt: review.data.toISOString(),
-      reviewer: {
-        id: review.usuario.id,
-        name: review.usuario.nome,
-        avatarUrl: review.usuario.foto_documento_url ?? null,
-      },
-    })),
+    reviews: productReviews.map((review) => {
+      const permissions = computeReviewPermissions({
+        viewerId: viewerUserId,
+        authorId: review.usuario_id,
+        createdAt: review.data,
+      });
+
+      return {
+        id: review.id,
+        rating: review.nota,
+        title: review.titulo,
+        comment: review.comentario,
+        createdAt: review.data.toISOString(),
+        reviewer: {
+          id: review.usuario.id,
+          name: review.usuario.nome,
+          avatarUrl: review.usuario.foto_documento_url ?? null,
+        },
+        canEdit: permissions.canEdit,
+        canDelete: permissions.canDelete,
+      };
+    }),
     viewerCanReview:
       Boolean(viewerUserId) && !viewerIsOwner && !viewerHasReview && !isDonation,
     viewerHasReview: viewerHasReview,

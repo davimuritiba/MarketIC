@@ -15,6 +15,7 @@ export default function ProfileDashboard({
   historyAds,
   acquiredItems,
   courses,
+  reviews,
 }: ProfilePageData) {
   const [activeItems, setActiveItems] = useState(activeAds)
   const [historyItems, setHistoryItems] = useState(historyAds)
@@ -42,7 +43,7 @@ export default function ProfileDashboard({
   return (
     <div className="max-w-screen-2xl mx-auto px-4 py-6 grid grid-cols-12 gap-6">
       <div className="col-span-12 md:col-span-4 lg:col-span-3 space-y-10">
-        <ProfileCard user={user} courses={courses} />
+        <ProfileCard user={user} courses={courses} reviews={reviews} />
       </div>
 
       <div className="col-span-12 md:col-span-8 lg:col-span-9 space-y-10">
