@@ -1,4 +1,4 @@
-import type { AvaliacaoItem, EstadoConservacao, ImagemAnuncio, Item, TipoTransacao, } from "@prisma/client"
+import type { AvaliacaoItem, EstadoConservacao, ImagemAnuncio, Item, TipoTransacao, Usuario, } from "@prisma/client"
 
 import type { AdItem } from "@/components/AdCard"
 import type { ConditionLabel, TransactionLabel } from "@/types/profile"
@@ -18,6 +18,7 @@ const CONDITION_LABEL: Record<EstadoConservacao, ConditionLabel> = {
 export interface PrismaItemWithRelations extends Item {
   imagens: ImagemAnuncio[]
   avaliacoes: Pick<AvaliacaoItem, "nota">[]
+  usuario?: Pick<Usuario, "id" | "nome" | "reputacao_media" | "reputacao_count">
 }
 
 export function formatPrice(
@@ -49,6 +50,15 @@ export function mapItemToAd(item: PrismaItemWithRelations): AdItem {
     ? ratingValues.reduce((sum, nota) => sum + nota, 0) / ratingValues.length
     : undefined
 
+  const sellerRating =
+    typeof item.usuario?.reputacao_media === "number"
+      ? item.usuario.reputacao_media
+      : undefined
+  const sellerReviews =
+    typeof item.usuario?.reputacao_count === "number"
+      ? item.usuario.reputacao_count
+      : undefined
+
   return {
     id: item.id,
     href: `/produto/${item.id}`,
@@ -63,5 +73,8 @@ export function mapItemToAd(item: PrismaItemWithRelations): AdItem {
     rating: averageRating,
     reviews: ratingValues.length || undefined,
     image: item.imagens?.[0]?.url ?? undefined,
+    sellerName: item.usuario?.nome ?? undefined,
+    sellerRating,
+    sellerReviews,
   }
 }

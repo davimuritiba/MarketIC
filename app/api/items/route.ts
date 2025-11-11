@@ -5,21 +5,144 @@ import { DEFAULT_EXPIRATION_MONTHS } from "@/lib/item-status";
 import type { EstadoConservacao, TipoTransacao } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 
+/*Lógica de score “Recomendado”
+Quando o front pede itens com ordenação “recomendado”, a API calcula um score somando quatro bônus: recência (anúncios novos ganham até +2), 
+reputação do vendedor (média de avaliações mais um bônus que cresce com a contagem de reviews até +1), qualidade do anúncio (imagem principal, 
+descrição longa e preço válido em vendas somam até +2,5) e engajamento (favoritos e interesses podem render até +3,5). 
+Depois dessa soma, a lista é reordenada pelo score resultante; empates são desempates pela data de publicação mais recente.*/
+
+function normalizeEnumValue(value: string | null | undefined) {
+  if (!value) {
+    return "";
+  }
+
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toUpperCase();
+}
+
+type SortOption = "recomendado" | "recentes" | "preco-asc" | "preco-desc" | "populares";
+
+function computeRecencyBonus(publishedAt: Date | null | undefined) {
+  if (!publishedAt) {
+    return 0;
+  }
+
+  const now = new Date();
+  const diffMs = now.getTime() - publishedAt.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+  if (diffDays <= 7) {
+    return 2;
+  }
+
+  if (diffDays <= 14) {
+    return 1.5;
+  }
+
+  if (diffDays <= 30) {
+    return 1;
+  }
+
+  if (diffDays <= 60) {
+    return 0.5;
+  }
+
+  return 0;
+}
+
+function computeSellerScore(
+  reputacaoMedia: number | null | undefined,
+  reputacaoCount: number | null | undefined,
+) {
+  const baseScore = typeof reputacaoMedia === "number" ? reputacaoMedia : 0;
+  const count = typeof reputacaoCount === "number" ? reputacaoCount : 0;
+  const bonus = Math.min(1, count / 20);
+
+  return baseScore + bonus;
+}
+
+function computeQualityBonus(
+  hasImages: boolean,
+  description?: string | null,
+  precoCentavos?: number | null,
+  tipo?: TipoTransacao,
+) {
+  let bonus = 0;
+
+  if (hasImages) {
+    bonus += 1;
+  }
+
+  if ((description?.trim().length ?? 0) > 120) {
+    bonus += 1;
+  }
+
+  if (tipo === "VENDA" && typeof precoCentavos === "number") {
+    if (precoCentavos > 0) {
+      bonus += 0.5;
+    }
+  }
+
+  return bonus;
+}
+
+function computeEngagementBonus(favorites: number, interests: number) {
+  let bonus = 0;
+
+  if (favorites > 0) {
+    bonus += 1;
+  }
+
+  if (interests > 0) {
+    bonus += 2;
+  }
+
+  if (interests >= 5) {
+    bonus += 0.5;
+  }
+
+  return bonus;
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q")?.trim() ?? "";
-    const tipoParam = searchParams.get("tipo")?.trim().toUpperCase();
-    const estadoParam = searchParams.get("estado")?.trim().toUpperCase();
+    const categoriaId = searchParams.get("categoriaId")?.trim() ?? "";
+    const tipoParam = normalizeEnumValue(searchParams.get("tipo"));
+    const estadoParam = normalizeEnumValue(searchParams.get("estado"));
     const precoParam = searchParams.get("preco")?.trim();
+    const comFoto = searchParams.get("comFoto") === "true";
+
+    const rawOrdenacao = searchParams.get("ordenacao")?.toLowerCase() ?? "recomendado";
+    const allowedSorts: SortOption[] = [
+      "recomendado",
+      "recentes",
+      "preco-asc",
+      "preco-desc",
+      "populares",
+    ];
+    const ordenacaoParam: SortOption = allowedSorts.includes(
+      rawOrdenacao as SortOption,
+    )
+      ? (rawOrdenacao as SortOption)
+      : "recomendado";
 
     const where: Prisma.ItemWhereInput = {};
+
+    where.status = "PUBLICADO";
 
     if (q) {
       where.OR = [
         { titulo: { contains: q, mode: "insensitive" } },
         { descricao: { contains: q, mode: "insensitive" } },
       ];
+    }
+
+    if (categoriaId) {
+      where.categoria_id = categoriaId;
     }
 
     if (tipoParam && ["VENDA", "EMPRESTIMO", "DOACAO"].includes(tipoParam)) {
@@ -52,23 +175,132 @@ export async function GET(req: Request) {
       }
     }
 
-    const items = await prisma.item.findMany({
-      where,
-      include: {
-        categoria: true,
-        usuario: { select: { id: true, nome: true, email_institucional: true } },
-        imagens: {
-          orderBy: { ordem: "asc" },
-          take: 1,
-        },
-        avaliacoes: {
-          select: { nota: true },
+    if (comFoto) {
+      where.imagens = { some: {} };
+    }
+
+    const include = {
+      categoria: true,
+      usuario: {
+        select: {
+          id: true,
+          nome: true,
+          reputacao_media: true,
+          reputacao_count: true,
         },
       },
-      orderBy: { titulo: "asc" },
+      imagens: {
+        orderBy: { ordem: "asc" },
+        take: 1,
+      },
+      avaliacoes: {
+        select: { nota: true },
+      },
+      _count: {
+        select: {
+          favoritos: true,
+          interesses: true,
+        },
+      },
+    } satisfies Prisma.ItemInclude;
+
+    const items = await prisma.item.findMany({
+      where,
+      include,
+      orderBy:
+        ordenacaoParam === "recentes"
+          ? { publicado_em: "desc" }
+          : ordenacaoParam === "preco-asc"
+          ? [
+              { preco_centavos: "asc" },
+              { publicado_em: "desc" },
+            ]
+          : ordenacaoParam === "preco-desc"
+          ? [
+              { preco_centavos: "desc" },
+              { publicado_em: "desc" },
+            ]
+          : { publicado_em: "desc" },
     });
-    
-    return NextResponse.json(items);
+
+    let sorted = [...items];
+
+    if (ordenacaoParam === "recomendado") {
+      const scored = items.map((item) => {
+        const score =
+          computeRecencyBonus(item.publicado_em) +
+          computeSellerScore(
+            item.usuario?.reputacao_media,
+            item.usuario?.reputacao_count,
+          ) +
+          computeQualityBonus(
+            (item.imagens?.length ?? 0) > 0,
+            item.descricao,
+            item.preco_centavos,
+            item.tipo_transacao,
+          ) +
+          computeEngagementBonus(
+            item._count?.favoritos ?? 0,
+            item._count?.interesses ?? 0,
+          );
+
+        return { item, score };
+      });
+
+      scored.sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score;
+        }
+
+        const dateA = a.item.publicado_em ?? a.item.created_at;
+        const dateB = b.item.publicado_em ?? b.item.created_at;
+
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      sorted = scored.map(({ item }) => item);
+    } else if (ordenacaoParam === "preco-asc" || ordenacaoParam === "preco-desc") {
+      sorted.sort((a, b) => {
+        const priceA = typeof a.preco_centavos === "number" ? a.preco_centavos : null;
+        const priceB = typeof b.preco_centavos === "number" ? b.preco_centavos : null;
+
+        if (priceA === null && priceB === null) {
+          return 0;
+        }
+
+        if (priceA === null) {
+          return 1;
+        }
+
+        if (priceB === null) {
+          return -1;
+        }
+
+        return ordenacaoParam === "preco-asc"
+          ? priceA - priceB
+          : priceB - priceA;
+      });
+    } else if (ordenacaoParam === "populares") {
+      sorted.sort((a, b) => {
+        const engagementsA =
+          (a._count?.favoritos ?? 0) +
+          (a._count?.interesses ?? 0) * 2;
+        const engagementsB =
+          (b._count?.favoritos ?? 0) +
+          (b._count?.interesses ?? 0) * 2;
+
+        if (engagementsB !== engagementsA) {
+          return engagementsB - engagementsA;
+        }
+
+        const dateA = a.publicado_em ?? a.created_at;
+        const dateB = b.publicado_em ?? b.created_at;
+
+        return dateB.getTime() - dateA.getTime();
+      });
+    }
+
+    return NextResponse.json(sorted);
   } catch (error) {
     console.error("Erro ao listar itens:", error);
     return NextResponse.json(

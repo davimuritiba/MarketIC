@@ -1,158 +1,175 @@
 "use client";
+/*Lógica de score “Recomendado”
+Quando o front pede itens com ordenação “recomendado”, a API calcula um score somando quatro bônus: recência (anúncios novos ganham até +2), 
+reputação do vendedor (média de avaliações mais um bônus que cresce com a contagem de reviews até +1), qualidade do anúncio (imagem principal, 
+descrição longa e preço válido em vendas somam até +2,5) e engajamento (favoritos e interesses podem render até +3,5). 
+Depois dessa soma, a lista é reordenada pelo score resultante; empates são desempates pela data de publicação mais recente.*/
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, } from "@/components/ui/select";
 import { Plus, Grid2X2, ShoppingCart, Heart, BookOpen, Cpu, Dumbbell, Guitar, Boxes, } from "lucide-react";
-import AdCard, { AdGridPager } from "@/components/AdCard";
+import { Badge } from "@/components/ui/badge";
+import { AdGridPager } from "@/components/AdCard";
+import { mapItemToAd, type PrismaItemWithRelations } from "@/lib/ad-mapper";
 
-// ---------- Tipos e mocks ----------
-type Produto = {
+interface Categoria {
   id: string;
-  titulo: string;
-  descricao: string;
-  tipo: "Venda" | "Empréstimo" | "Doação";
-  estado: "Novo" | "Seminovo" | "Usado";
-  preco?: number;
-  prazoDias?: number;
-  categoria: string;
-  avaliacoes?: number;
-  rating?: number;
-  imagem?: string;
+  nome: string;
+}
+
+type ApiItem = PrismaItemWithRelations & {
+  categoria?: { id: string; nome: string } | null;
+  _count?: { favoritos: number; interesses: number };
 };
 
-const PRODUTOS: Produto[] = [
-  {
-    id: "1",
-    titulo: "Impressora Multifuncional HP Smart Tank",
-    descricao: "Impressora com tanque de tinta integrado",
-    tipo: "Venda",
-    estado: "Usado",
-    preco: 819,
-    categoria: "Eletrônicos",
-    avaliacoes: 4,
-    rating: 4,
-    imagem: "/images/impressora.jpeg",
-  },
-  {
-    id: "2",
-    titulo: "Livro James Stewart Cálculo",
-    descricao: "Livro base para cálculo",
-    tipo: "Empréstimo",
-    estado: "Usado",
-    prazoDias: 120,
-    categoria: "Livros",
-    avaliacoes: 10,
-    rating: 5,
-    imagem: "/images/livro.png",
-  },
-  {
-    id: "3",
-    titulo: "Placa Arduino Uno R3",
-    descricao: "Placa Arduino com cabo USB",
-    tipo: "Doação",
-    estado: "Usado",
-    categoria: "Eletrônicos",
-    avaliacoes: 2,
-    rating: 4,
-    imagem: "/images/arduino.jpeg",
-  },
-  {
-    id: "4",
-    titulo: "Memória ddr3 4gb",
-    descricao: "Memória computador",
-    tipo: "Doação",
-    estado: "Usado",
-    categoria: "Eletrônicos",
-    avaliacoes: 1,
-    rating: 3,
-    imagem: "/images/memoriaram.jpeg",
-  },
-  {
-    id: "5",
-    titulo: "Livro de Algoritmos",
-    descricao: "Introdução à teoria dos algoritmos",
-    tipo: "Venda",
-    estado: "Novo",
-    preco: 100,
-    categoria: "Livros",
-    avaliacoes: 5,
-    rating: 4,
-    imagem: "/images/livro.png",
-  },
-  {
-    id: "6",
-    titulo: "Bola de Futebol",
-    descricao: "Bola oficial de couro",
-    tipo: "Doação",
-    estado: "Usado",
-    categoria: "Esportes",
-    avaliacoes: 3,
-    rating: 4,
-    imagem: "/images/bola.jpeg",
-  },
-  {
-    id: "7",
-    titulo: "Violão Acústico",
-    descricao: "Instrumento para iniciantes",
-    tipo: "Empréstimo",
-    estado: "Usado",
-    prazoDias: 30,
-    categoria: "Hobbies",
-    avaliacoes: 8,
-    rating: 5,
-    imagem: "/images/violao.jpeg",
-  },
-  {
-    id: "8",
-    titulo: "Caixa de Ferramentas",
-    descricao: "Conjunto com diversas ferramentas",
-    tipo: "Venda",
-    estado: "Seminovo",
-    preco: 150,
-    categoria: "Outros",
-    avaliacoes: 0,
-    rating: 0,
-    imagem: "/images/caixa.jpeg",
-  },
+type SortOption = "recomendado" | "recentes" | "preco-asc";
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "recomendado", label: "Recomendado" },
+  { value: "recentes", label: "Mais recentes" },
+  { value: "preco-asc", label: "Menor preço" },
 ];
 
-const fmtPreco = (v?: number) =>
-  typeof v === "number"
-    ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-    : "—";
+const TRANSACTION_TO_API: Record<string, string> = {
+  Venda: "VENDA",
+  "Empréstimo": "EMPRESTIMO",
+  Doação: "DOACAO",
+};
 
-// ---------- Página ----------
+const CONDITION_TO_API: Record<string, string> = {
+  Novo: "NOVO",
+  Seminovo: "SEMINOVO",
+  Usado: "USADO",
+};
+
 export default function HomePage() {
-  const categorias = Array.from(new Set(PRODUTOS.map((p) => p.categoria)));
+  const [categories, setCategories] = useState<Categoria[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
 
-  const [catFilter, setCatFilter] = useState("");
+  const [items, setItems] = useState<ApiItem[]>([]);
+  const [itemsLoading, setItemsLoading] = useState(true);
+  const [itemsError, setItemsError] = useState<string | null>(null);
+
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [tipo, setTipo] = useState("");
   const [estado, setEstado] = useState("");
   const [preco, setPreco] = useState("");
+  const [sort, setSort] = useState<SortOption>("recomendado");
 
-  const results = useMemo(() => {
-    let arr = [...PRODUTOS];
-    if (catFilter) arr = arr.filter((p) => p.categoria === catFilter);
-    if (tipo) arr = arr.filter((p) => p.tipo === tipo);
-    if (estado) arr = arr.filter((p) => p.estado === estado);
-    if (preco) {
-      if (preco === "0-50") arr = arr.filter((p) => (p.preco ?? Infinity) <= 50);
-      if (preco === "50-100")
-        arr = arr.filter(
-          (p) => (p.preco ?? Infinity) > 50 && (p.preco ?? Infinity) <= 100
+  useEffect(() => {
+    let active = true;
+
+    async function loadCategories() {
+      try {
+        setCategoriesError(null);
+        const response = await fetch("/api/categories", { cache: "no-store" });
+
+        if (!response.ok) {
+          throw new Error("Não foi possível carregar as categorias.");
+        }
+
+        const data = (await response.json()) as Categoria[];
+        if (!active) {
+          return;
+        }
+
+        setCategories(data ?? []);
+      } catch (error) {
+        console.error("Erro ao carregar categorias", error);
+        if (!active) {
+          return;
+        }
+        setCategoriesError(
+          error instanceof Error
+            ? error.message
+            : "Erro inesperado ao carregar categorias.",
         );
-      if (preco === "100+") arr = arr.filter((p) => (p.preco ?? 0) > 100);
+      } finally {
+        if (active) {
+          setCategoriesLoading(false);
+        }
+      }
     }
-    return arr;
-  }, [catFilter, tipo, estado, preco]);
 
-  const grouped = useMemo(() => {
-    return results.reduce((acc, p) => {
-      (acc[p.categoria] ||= []).push(p);
-      return acc;
-    }, {} as Record<string, Produto[]>);
-  }, [results]);
+    void loadCategories();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+
+    async function loadItems() {
+      try {
+        setItemsLoading(true);
+        setItemsError(null);
+
+        const params = new URLSearchParams();
+        if (selectedCategory) params.set("categoriaId", selectedCategory);
+        if (tipo) {
+          const mapped = TRANSACTION_TO_API[tipo] ?? tipo;
+          params.set("tipo", mapped);
+        }
+        if (estado) {
+          const mapped = CONDITION_TO_API[estado] ?? estado;
+          params.set("estado", mapped);
+        }
+        if (preco) params.set("preco", preco);
+        params.set("ordenacao", sort);
+
+        const queryString = params.toString();
+        const response = await fetch(
+          `/api/items${queryString ? `?${queryString}` : ""}`,
+          {
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error("Não foi possível carregar os anúncios.");
+        }
+
+        const data = (await response.json()) as ApiItem[];
+
+        if (!active) {
+          return;
+        }
+
+        setItems(data ?? []);
+      } catch (error) {
+        if (controller.signal.aborted || !active) {
+          return;
+        }
+
+        console.error("Erro ao carregar anúncios", error);
+        setItemsError(
+          error instanceof Error
+            ? error.message
+            : "Erro inesperado ao carregar anúncios.",
+        );
+        setItems([]);
+      } finally {
+        if (active) {
+          setItemsLoading(false);
+        }
+      }
+    }
+
+    void loadItems();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [selectedCategory, tipo, estado, preco, sort]);
+
+  const adItems = useMemo(() => items.map((item) => mapItemToAd(item)), [items]);
 
   const actions = [
     { label: "Novo Anúncio", href: "/anunciar/novo", icon: Plus },
@@ -169,25 +186,18 @@ export default function HomePage() {
     Outros: Boxes,
   };
 
-  type AdItem = React.ComponentProps<typeof AdCard>["item"];
-  const toAdItem = (p: Produto): AdItem => ({
-    id: p.id,
-    href: `/produto/${p.id}`,
-    title: p.titulo,
-    type: p.tipo as AdItem["type"],
-    price: p.preco ? fmtPreco(p.preco) : undefined,
-    days: p.prazoDias,
-    condition: p.tipo !== "Doação" ? p.estado : undefined,
-    reviews: p.avaliacoes,
-    rating: p.rating,
-    image: p.imagem,
-  });
+  const selectedCategoryName = useMemo(() => {
+    if (!selectedCategory) {
+      return "";
+    }
+    const match = categories.find((category) => category.id === selectedCategory);
+    return match?.nome ?? "";
+  }, [categories, selectedCategory]);
 
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-semibold">Olá, Usuário</h1>
 
-      {/* ações rápidas */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {actions.map(({ label, href, icon: Icon }) => (
           <Link
@@ -201,33 +211,55 @@ export default function HomePage() {
         ))}
       </div>
 
-      {/* categorias */}
-      <section>
-        <h2 className="text-xl font-semibold mb-4">Categorias</h2>
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-semibold">Categorias</h2>
+          {categoriesLoading ? (
+            <span className="text-xs text-muted-foreground">Carregando...</span>
+          ) : null}
+          {categoriesError ? (
+            <span className="text-xs text-red-600">{categoriesError}</span>
+          ) : null}
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {categorias.map((c) => {
-            const Icon = catIcons[c as keyof typeof catIcons];
+          {categories.map((category) => {
+            const Icon = catIcons[category.nome] ?? Boxes;
+            const isActive = selectedCategory === category.id;
             return (
               <button
-                key={c}
-                onClick={() => setCatFilter(catFilter === c ? "" : c)}
-                className={`cursor-pointer border rounded-lg p-3 flex flex-col items-center gap-2 hover:bg-neutral-200 ${
-                  catFilter === c ? "bg-neutral-100" : "bg-white"
-                }`}
+                key={category.id}
+                onClick={() =>
+                  setSelectedCategory((prev) =>
+                    prev === category.id ? "" : category.id,
+                  )
+                }
+                className={
+                  `cursor-pointer border rounded-lg p-3 flex flex-col items-center gap-2 transition-colors ${
+                    isActive ? "bg-neutral-100" : "bg-white"
+                  } hover:bg-neutral-100`
+                }
               >
-                {Icon && <Icon className="w-5 h-5" />}
-                <span className="text-sm">{c}</span>
+                <Icon className="w-5 h-5" />
+                <span className="text-sm text-center">{category.nome}</span>
               </button>
             );
           })}
+          {!categoriesLoading && categories.length === 0 ? (
+            <div className="col-span-full text-sm text-muted-foreground">
+              Nenhuma categoria disponível no momento.
+            </div>
+          ) : null}
         </div>
       </section>
 
-      {/* anúncios */}
-      <section>
-        <h2 className="text-2xl font-semibold mb-4">Anúncios</h2>
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-2xl font-semibold">Anúncios</h2>
+          {selectedCategoryName ? (
+            <Badge variant="secondary">{selectedCategoryName}</Badge>
+          ) : null}
+        </div>
 
-        {/* barra de filtros (sem categoria) */}
         <div className="flex flex-wrap items-center gap-4 border-b pb-3">
           <div className="flex items-center gap-2">
             <span className="font-semibold">Filtrar por:</span>
@@ -236,7 +268,7 @@ export default function HomePage() {
           <div className="flex items-center gap-2">
             <span className="font-semibold">Tipo</span>
             <Select
-              onValueChange={(v) => setTipo(v === "all" ? "" : v)}
+              onValueChange={(value) => setTipo(value === "all" ? "" : value)}
               value={tipo}
             >
               <SelectTrigger className="h-9 w-44 cursor-pointer">
@@ -260,12 +292,12 @@ export default function HomePage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="font-semibold">Estado de conservação</span>
+            <span className="font-semibold">Estado</span>
             <Select
-              onValueChange={(v) => setEstado(v === "all" ? "" : v)}
+              onValueChange={(value) => setEstado(value === "all" ? "" : value)}
               value={estado}
             >
-              <SelectTrigger className="h-9 w-48 cursor-pointer">
+              <SelectTrigger className="h-9 w-40 cursor-pointer">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
@@ -288,7 +320,7 @@ export default function HomePage() {
           <div className="flex items-center gap-2">
             <span className="font-semibold">Preço</span>
             <Select
-              onValueChange={(v) => setPreco(v === "any" ? "" : v)}
+              onValueChange={(value) => setPreco(value === "any" ? "" : value)}
               value={preco}
             >
               <SelectTrigger className="h-9 w-40 cursor-pointer">
@@ -310,21 +342,45 @@ export default function HomePage() {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            <span className="font-semibold">Ordenar por</span>
+            <Select onValueChange={(value) => setSort(value as SortOption)} value={sort}>
+              <SelectTrigger className="h-9 w-44 cursor-pointer">
+                <SelectValue placeholder="Ordenação" />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    className="cursor-pointer"
+                    value={option.value}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        {/* listagem dividida por categorias */}
-        {Object.entries(grouped).map(([cat, items]) => (
-          <div key={cat} className="mt-6">
-            <h3 className="text-xl font-semibold mb-3">{cat}</h3>
-            <AdGridPager
-              items={items.map(toAdItem)}
-              maxPerPage={4}
-              gridClass="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
-            />
+        {itemsError ? (
+          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {itemsError}
           </div>
-        ))}
+        ) : null}
 
-        {results.length === 0 && (
+        {itemsLoading ? (
+          <div className="text-center text-muted-foreground py-20">
+            Carregando anúncios...
+          </div>
+        ) : adItems.length > 0 ? (
+          <AdGridPager
+            items={adItems}
+            maxPerPage={8}
+            gridClass="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
+          />
+        ) : (
           <div className="text-center text-muted-foreground py-20">
             Nenhum anúncio encontrado.
           </div>

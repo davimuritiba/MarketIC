@@ -54,7 +54,7 @@ export default function AdCard({
             <Icon className="h-4 w-4" />
             <span className="text-sm font-medium">{item.type}</span>
           </div>
-          <h3 className="text-sm font-medium">{item.title}</h3>
+          <h3 className="text-m font-medium">{item.title}</h3>
           <div className="flex items-center justify-between text-xs">
             <p className="text-muted-foreground">
               {item.type === "Venda"
@@ -68,7 +68,7 @@ export default function AdCard({
                 : "Proposta de troca"}
             </p>
             {item.type !== "Doação" && item.condition && (
-              <span className="font-bold">{item.condition}</span>
+              <span className="font-bold text-sm">{item.condition}</span>
             )}
           </div>
           {item.rating !== undefined && (
