@@ -1,16 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { computeReviewPermissions, REVIEW_EDIT_WINDOW_MS, } from "@/lib/review-permissions";
+import {
+  computeReviewPermissions,
+  REVIEW_EDIT_WINDOW_MS,
+} from "@/lib/review-permissions";
+
+export const runtime = "nodejs";
 
 function buildValidationError(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
 }
 
 export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string; reviewId: string } },
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; reviewId: string }> },
 ) {
   const session = await getSession();
 
@@ -21,8 +26,7 @@ export async function PATCH(
     );
   }
 
-  const itemId = params.id;
-  const reviewId = params.reviewId;
+  const { id: itemId, reviewId } = await params;
 
   if (!itemId || !reviewId) {
     return buildValidationError("Avaliação inválida.");
@@ -133,8 +137,8 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
-  { params }: { params: { id: string; reviewId: string } },
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string; reviewId: string }> },
 ) {
   const session = await getSession();
 
@@ -145,8 +149,7 @@ export async function DELETE(
     );
   }
 
-  const itemId = params.id;
-  const reviewId = params.reviewId;
+  const { id: itemId, reviewId } = await params;
 
   if (!itemId || !reviewId) {
     return buildValidationError("Avaliação inválida.");

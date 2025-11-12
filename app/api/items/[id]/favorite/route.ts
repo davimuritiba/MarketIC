@@ -1,12 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export const runtime = "nodejs";
+
 export async function POST(
-  _request: Request,
-  { params }: { params: { id: string } },
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await getSession();
 
@@ -17,7 +19,7 @@ export async function POST(
     );
   }
 
-  const itemId = params.id;
+  const { id: itemId } = await params;
 
   if (!itemId) {
     return NextResponse.json({ error: "Item inválido." }, { status: 400 });
@@ -67,8 +69,8 @@ export async function POST(
 }
 
 export async function DELETE(
-  _request: Request,
-  { params }: { params: { id: string } },
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await getSession();
 
@@ -79,7 +81,7 @@ export async function DELETE(
     );
   }
 
-  const itemId = params.id;
+  const { id: itemId } = await params;
 
   if (!itemId) {
     return NextResponse.json({ error: "Item inválido." }, { status: 400 });

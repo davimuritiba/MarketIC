@@ -1,15 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import type { EstadoConservacao, TipoTransacao } from "@prisma/client";
 
+export const runtime = "nodejs";
+
 export async function GET(
-  _req: Request,
-  { params }: { params: { id: string } }
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const item = await prisma.item.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         categoria: true,
         imagens: {
@@ -35,7 +38,10 @@ export async function GET(
   }
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const session = await getSession();
 
@@ -43,8 +49,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       return new NextResponse("Sessão inválida ou expirada.", { status: 401 });
     }
 
+    const { id } = await params;
+
     const existingItem = await prisma.item.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { usuario_id: true },
     });
 
@@ -243,7 +251,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     const updatedItem = await prisma.$transaction(async (tx) => {
       await tx.item.update({
-        where: { id: params.id },
+        where: { id },
         data: {
           titulo,
           descricao,
@@ -261,7 +269,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       });
 
       const existingImages = await tx.imagemAnuncio.findMany({
-        where: { anuncio_id: params.id },
+        where: { anuncio_id: id },
         select: { id: true },
       });
 
@@ -294,7 +302,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
           } else {
             await tx.imagemAnuncio.create({
               data: {
-                anuncio_id: params.id,
+                anuncio_id: id,
                 url: imagem.url,
                 ordem: imagem.ordem,
               },
@@ -304,7 +312,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       );
 
       return tx.item.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: {
           categoria: true,
           imagens: { orderBy: { ordem: "asc" } },
@@ -319,7 +327,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const session = await getSession();
 
@@ -327,8 +338,10 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
       return new NextResponse("Sessão inválida ou expirada.", { status: 401 });
     }
 
+    const { id } = await params;
+
     const existingItem = await prisma.item.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { usuario_id: true },
     });
 
@@ -341,12 +354,12 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     }
 
     await prisma.$transaction(async (tx) => {
-      await tx.imagemAnuncio.deleteMany({ where: { anuncio_id: params.id } });
-      await tx.avaliacaoItem.deleteMany({ where: { anuncio_id: params.id } });
-      await tx.interesse.deleteMany({ where: { anuncio_id: params.id } });
-      await tx.favorito.deleteMany({ where: { anuncio_id: params.id } });
-      await tx.carrinhoItem.deleteMany({ where: { anuncio_id: params.id } });
-      await tx.item.delete({ where: { id: params.id } });
+      await tx.imagemAnuncio.deleteMany({ where: { anuncio_id: id } });
+      await tx.avaliacaoItem.deleteMany({ where: { anuncio_id: id } });
+      await tx.interesse.deleteMany({ where: { anuncio_id: id } });
+      await tx.favorito.deleteMany({ where: { anuncio_id: id } });
+      await tx.carrinhoItem.deleteMany({ where: { anuncio_id: id } });
+      await tx.item.delete({ where: { id } });
     });
 
     return NextResponse.json({ message: "Item deletado com sucesso" });

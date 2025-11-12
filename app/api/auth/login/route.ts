@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 
 const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@ic\.ufal\.br$/;
 
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
 

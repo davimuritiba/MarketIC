@@ -1,11 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export const runtime = "nodejs";
+
 export async function POST(
-  _request: Request,
-  { params }: { params: { id: string } },
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await getSession();
 
@@ -16,7 +18,7 @@ export async function POST(
     );
   }
 
-  const anuncioId = params.id;
+  const { id: anuncioId } = await params;
 
   if (!anuncioId) {
     return NextResponse.json(
@@ -98,8 +100,8 @@ export async function POST(
 }
 
 export async function DELETE(
-  _request: Request,
-  { params }: { params: { id: string } },
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await getSession();
 
@@ -110,7 +112,7 @@ export async function DELETE(
     );
   }
 
-  const anuncioId = params.id;
+  const { id: anuncioId } = await params;
 
   if (!anuncioId) {
     return NextResponse.json(

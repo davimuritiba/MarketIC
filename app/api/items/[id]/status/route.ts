@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
 import { mapItemToAd, type PrismaItemWithRelations } from "@/lib/ad-mapper"
 import { getSession } from "@/lib/auth"
@@ -7,6 +7,8 @@ import {
   type StatusSource,
 } from "@/lib/item-status"
 import { prisma } from "@/lib/prisma"
+
+export const runtime = "nodejs"
 
 import type { ProfileAdItem } from "@/types/profile"
 
@@ -28,8 +30,8 @@ function mapItemToProfileAd(item: ItemWithRelations): ProfileAdItem {
 }
 
 export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } },
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await getSession()
@@ -47,8 +49,10 @@ export async function PATCH(
       )
     }
 
+    const { id } = await params
+
     const item = await prisma.item.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         imagens: {
           orderBy: { ordem: "asc" },
@@ -91,7 +95,7 @@ export async function PATCH(
     }
 
     const updated = await prisma.item.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         imagens: {

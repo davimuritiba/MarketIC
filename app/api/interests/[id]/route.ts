@@ -1,11 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export const runtime = "nodejs";
+
 export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } },
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await getSession();
 
@@ -16,7 +18,7 @@ export async function PATCH(
     );
   }
 
-  const interestId = params.id;
+  const { id: interestId } = await params;
 
   if (!interestId) {
     return NextResponse.json(

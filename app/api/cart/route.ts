@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export const runtime = "nodejs";
+
 function formatCurrency(valueInCents: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",

@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { attachSessionCookie, createSession, hashPassword } from "@/lib/auth";
 import { isValidBrazilianPhone, normalizeBrazilianPhone } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
+
+export const runtime = "nodejs";
 
 function sanitizeCPF(value: string) {
   return value.replace(/\D/g, "");
@@ -64,7 +66,7 @@ function parseBase64Image(dataUrl: string) {
   return { mimeType, sizeInBytes };
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
 
   if (!body || typeof body !== "object") {

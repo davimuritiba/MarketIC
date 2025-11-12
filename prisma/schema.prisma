@@ -15,27 +15,27 @@ model Categoria {
 }
 
 model Usuario {
-  id                  String          @id @default(uuid()) @db.Uuid
-  CPF                 String          @unique
-  RG                  String          @unique
-  nome                String
-  email_institucional String          @unique
-  senha               String
-  telefone            String
-  data_nascimento     DateTime
-  reputacao_media     Float           @default(0)
-  reputacao_count     Int?
-  curso               String
-  foto_documento_url  String
-  criados             AvaliacaoItem[] @relation("CriadorAvaliacao")
-  avaliacoes          AvaliacaoItem[] @relation("UsuarioAvaliacoes")
-  avaliacoesRecebidas AvaliacaoUsuario[] @relation("UsuarioAvaliacoesRecebidas")
+  id                   String             @id @default(uuid()) @db.Uuid
+  CPF                  String             @unique
+  RG                   String             @unique
+  nome                 String
+  email_institucional  String             @unique
+  senha                String
+  telefone             String
+  data_nascimento      DateTime
+  reputacao_media      Float              @default(0)
+  reputacao_count      Int?
+  curso                String
+  foto_documento_url   String
+  criados              AvaliacaoItem[]    @relation("CriadorAvaliacao")
+  avaliacoes           AvaliacaoItem[]    @relation("UsuarioAvaliacoes")
+  avaliacoesRecebidas  AvaliacaoUsuario[] @relation("UsuarioAvaliacoesRecebidas")
   avaliacoesRealizadas AvaliacaoUsuario[] @relation("UsuarioAvaliacoesRealizadas")
-  carrinho            CarrinhoItem[]
-  favoritos           Favorito[]
-  interesses          Interesse[]
-  itens               Item[]
-  sessions            Session[]
+  carrinho             CarrinhoItem[]
+  favoritos            Favorito[]
+  interesses           Interesse[]
+  itens                Item[]
+  sessions             Session[]
 }
 
 model Item {
@@ -51,11 +51,11 @@ model Item {
   preco_centavos        Int?
   preco_formatado       String?
   created_at            DateTime          @default(now())
-  status                StatusAnuncio     @default(PUBLICADO)
-  publicado_em          DateTime          @default(now())
-  inativado_em          DateTime?
-  finalizado_em         DateTime?
   expira_em             DateTime?
+  finalizado_em         DateTime?
+  inativado_em          DateTime?
+  publicado_em          DateTime          @default(now())
+  status                StatusAnuncio     @default(PUBLICADO)
   avaliacoes            AvaliacaoItem[]
   carrinhos             CarrinhoItem[]
   favoritos             Favorito[]
@@ -97,24 +97,23 @@ model AvaliacaoUsuario {
   titulo       String?
   comentario   String?
   data         DateTime @default(now())
-
-  avaliador Usuario @relation("UsuarioAvaliacoesRealizadas", fields: [avaliador_id], references: [id], onDelete: Cascade)
-  avaliado  Usuario @relation("UsuarioAvaliacoesRecebidas", fields: [avaliado_id], references: [id], onDelete: Cascade)
+  avaliado     Usuario  @relation("UsuarioAvaliacoesRecebidas", fields: [avaliado_id], references: [id], onDelete: Cascade)
+  avaliador    Usuario  @relation("UsuarioAvaliacoesRealizadas", fields: [avaliador_id], references: [id], onDelete: Cascade)
 
   @@unique([avaliador_id, avaliado_id])
 }
 
 model Interesse {
-  id         String          @id @default(uuid()) @db.Uuid
-  usuario_id String          @db.Uuid
-  anuncio_id String          @db.Uuid
-  quantidade Int             @default(1)
-  status     StatusInteresse @default(PENDENTE)
-  share_email Boolean        @default(false)
-  share_phone Boolean        @default(false)
-  created_at DateTime        @default(now())
-  item       Item            @relation(fields: [anuncio_id], references: [id])
-  usuario    Usuario         @relation(fields: [usuario_id], references: [id])
+  id          String          @id @default(uuid()) @db.Uuid
+  usuario_id  String          @db.Uuid
+  anuncio_id  String          @db.Uuid
+  quantidade  Int             @default(1)
+  status      StatusInteresse @default(PENDENTE)
+  created_at  DateTime        @default(now())
+  share_email Boolean         @default(false)
+  share_phone Boolean         @default(false)
+  item        Item            @relation(fields: [anuncio_id], references: [id])
+  usuario     Usuario         @relation(fields: [usuario_id], references: [id])
 
   @@unique([usuario_id, anuncio_id])
 }

@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { DEFAULT_EXPIRATION_MONTHS } from "@/lib/item-status";
 import type { EstadoConservacao, TipoTransacao } from "@prisma/client";
 import { Prisma } from "@prisma/client";
+
+export const runtime = "nodejs";
 
 /*Lógica de score “Recomendado”
 Quando o front pede itens com ordenação “recomendado”, a API calcula um score somando quatro bônus: recência (anúncios novos ganham até +2), 
@@ -106,7 +108,7 @@ function computeEngagementBonus(favorites: number, interests: number) {
   return bonus;
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q")?.trim() ?? "";
@@ -311,7 +313,7 @@ export async function GET(req: Request) {
 }
 
 // POST /api/items
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
 

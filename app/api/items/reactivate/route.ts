@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
 import { DEFAULT_EXPIRATION_MONTHS } from "@/lib/item-status"
 import { getSession } from "@/lib/auth"
@@ -10,7 +10,9 @@ function addMonths(base: Date, months: number) {
   return result
 }
 
-export async function POST(req: Request) {
+export const runtime = "nodejs"
+
+export async function POST(req: NextRequest) {
   try {
     const session = await getSession()
 

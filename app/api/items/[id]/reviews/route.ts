@@ -1,12 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { computeReviewPermissions } from "@/lib/review-permissions";
 
+export const runtime = "nodejs";
+
 export async function POST(
-  request: Request,
-  { params }: { params: { id: string } },
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await getSession();
 
@@ -17,7 +19,7 @@ export async function POST(
     );
   }
 
-  const itemId = params.id;
+  const { id: itemId } = await params;
 
   if (!itemId) {
     return NextResponse.json({ error: "Item inválido." }, { status: 400 });

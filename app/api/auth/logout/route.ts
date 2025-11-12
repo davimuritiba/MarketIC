@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 
 import { SESSION_COOKIE, clearSessionCookie, deleteSession } from "@/lib/auth";
 
+export const runtime = "nodejs";
+
 export async function POST() {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(SESSION_COOKIE)?.value;

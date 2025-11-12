@@ -5,6 +5,8 @@ import { isValidBrazilianPhone, normalizeBrazilianPhone } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 import { getProfilePageData } from "@/lib/profile";
 
+export const runtime = "nodejs";
+
 export async function GET(request: NextRequest) {
   const user = await getUserFromRequest(request);
 
