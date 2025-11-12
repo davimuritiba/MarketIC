@@ -16,11 +16,6 @@ import { mapItemToAd, type PrismaItemWithRelations } from "@/lib/ad-mapper";
 
 import type { ProfileUserData } from "@/types/profile";
 
-interface Categoria {
-  id: string;
-  nome: string;
-}
-
 type FixedCategory = {
   key: string;
   nome: string;
@@ -73,9 +68,6 @@ const CONDITION_TO_API: Record<string, string> = {
 
 export default function HomePage() {
   const categories = FIXED_CATEGORIES;
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
-  const [categoriesError, setCategoriesError] = useState<string | null>(null);
-  const [categoryIds, setCategoryIds] = useState<Record<string, string>>({});
 
   const [items, setItems] = useState<ApiItem[]>([]);
   const [itemsLoading, setItemsLoading] = useState(true);
@@ -88,45 +80,25 @@ export default function HomePage() {
   const [sort, setSort] = useState<SortOption>("recomendado");
   const [userName, setUserName] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
+  const categoryIds = useMemo(() => {
+    const mapped: Record<string, string> = {};
+    for (const item of items) {
+      const categoryName = item.categoria?.nome;
+      const categoryId = item.categoria?.id;
+      if (!categoryName || !categoryId) {
+        continue;
+      }
 
-    async function loadCategories() {
-      try {
-        setCategoriesError(null);
-        const response = await fetch("/api/categories", { cache: "no-store" });
+      const key = CATEGORY_NAME_TO_KEY[categoryName];
+      if (!key) {
+        continue;
+      }
 
-        const data = (await response.json()) as Categoria[];
-        if (!active) {
-          return;
-        }
+      mapped[key] = categoryId;
+    }
 
-        const mappedIds: Record<string, string> = {};
-        for (const apiCategory of data ?? []) {
-          const key = CATEGORY_NAME_TO_KEY[apiCategory.nome];
-          if (key) {
-            mappedIds[key] = apiCategory.id;
-          }
-        }
-        setCategoryIds(mappedIds);
-      } catch (error) {
-        console.error("Erro ao carregar categorias", error);
-        if (!active) {
-          return;
-        }
-        setCategoriesError(
-          error instanceof Error
-            ? error.message
-            : "Erro inesperado ao carregar categorias.",
-        );
-      }  }
-
-    void loadCategories();
-
-    return () => {
-      active = false;
-    };
-  }, []);
+    return mapped;
+  }, [items]);
 
   const selectedCategoryId = useMemo(() => {
     if (!selectedCategoryKey) {
@@ -310,9 +282,6 @@ export default function HomePage() {
       <section className="space-y-3">
         <div className="flex items-center gap-2">
           <h2 className="text-xl font-semibold">Categorias</h2>
-          {categoriesError ? (
-            <span className="text-xs text-red-600">{categoriesError}</span>
-          ) : null}
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {categories.map((category) => {
