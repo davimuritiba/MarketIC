@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import type { EstadoConservacao, TipoTransacao } from "@prisma/client";
 
+type ImagemFormatada = { id?: string; url: string; ordem: number };
+
 export const runtime = "nodejs";
 
 export async function GET(
@@ -197,27 +199,31 @@ export async function PUT(
 
     const imagensInput = Array.isArray(data.imagens) ? data.imagens : [];
     const imagensFormatadas = imagensInput
-      .map((imagem: any, index: number) => {
+      .map((imagem: unknown, index: number) => {
         if (!imagem || typeof imagem !== "object") {
           return null;
         }
 
+        const imagemDados = imagem as { id?: unknown; url?: unknown };
+
         const id =
-          typeof imagem.id === "string" && imagem.id.trim().length > 0
-            ? imagem.id
+          typeof imagemDados.id === "string" && imagemDados.id.trim().length > 0
+            ? imagemDados.id
             : undefined;
         const url =
-          typeof imagem.url === "string" ? imagem.url.trim() : "";
+          typeof imagemDados.url === "string"
+            ? imagemDados.url.trim()
+            : "";
 
         if (!url) {
           return null;
         }
 
-        return { id, url, ordem: index };
+        const imagemFormatada: ImagemFormatada = { id, url, ordem: index };
+
+        return imagemFormatada;
       })
-      .filter((imagem): imagem is { id?: string; url: string; ordem: number } =>
-        Boolean(imagem),
-      );
+      .filter((imagem: ImagemFormatada | null): imagem is ImagemFormatada => Boolean(imagem));
 
     if (!imagensFormatadas.length) {
       return NextResponse.json(
@@ -273,11 +279,11 @@ export async function PUT(
         select: { id: true },
       });
 
-      const keepIds = new Set(
-        imagensFormatadas
-          .map((imagem) => imagem.id)
-          .filter((id): id is string => Boolean(id)),
-      );
+      const idsValidos = imagensFormatadas
+        .map((img: ImagemFormatada) => img.id) // => (string | undefined)[]
+        .filter((id: string | undefined): id is string => typeof id === 'string');
+
+      const keepIds = new Set<string>(idsValidos);
 
       const imagesToDelete = existingImages
         .map((image) => image.id)
@@ -290,7 +296,7 @@ export async function PUT(
       }
 
       await Promise.all(
-        imagensFormatadas.map(async (imagem) => {
+        imagensFormatadas.map(async (imagem: ImagemFormatada) => {
           if (imagem.id) {
             await tx.imagemAnuncio.update({
               where: { id: imagem.id },
