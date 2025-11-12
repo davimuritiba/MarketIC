@@ -1,39 +1,47 @@
-# Projeto de Programação Web.
+# MarketIC
 
-## MarketIC
-Projeto de um marketplace para o Instituto de Computação (IC)
+MarketIC é um projeto desenvolvido para a disciplina Programação 3 do Instituto de Computação (IC) da Universidade Federal de Alagoas (UFAL). O objetivo é oferecer um marketplace voltado aos estudantes do IC, facilitando a compra, venda e troca de produtos e serviços dentro da comunidade acadêmica.
 
-## Getting Started
+## Visão Geral
 
-First, run the development server:
+O marketplace foi pensado para atender às necessidades específicas dos alunos do IC, oferecendo um ambiente seguro e colaborativo. Entre as funcionalidades planejadas estão:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Cadastro e autenticação de usuários;
+- Criação e gerenciamento de anúncios de produtos e serviços;
+- Busca e filtragem de anúncios;
+- Comunicação entre compradores e vendedores.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tecnologias Utilizadas
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+O projeto é construído com [Next.js](https://nextjs.org/) e utiliza o ecossistema React. Outras tecnologias poderão ser incorporadas conforme as necessidades da disciplina.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Utilizar, e navegar pelo sistema
 
-## Learn More
+O projeto está hospedado no link https://market-ic.vercel.app/
 
-To learn more about Next.js, take a look at the following resources:
+## Estrutura Básica do Projeto
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `app/`: páginas e rotas da aplicação.
+- `components/`: componentes reutilizáveis.
+- `lib/`: utilitários e serviços de suporte.
+- `prisma/`: configuração do banco de dados e modelos (quando aplicável).
+- `styles/`: estilos globais e específicos.
+- `public/`: arquivos estáticos.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Contribuição
 
-## Deploy on Vercel
+Contribuições são bem-vindas! Caso deseje colaborar, siga os passos abaixo:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Faça um fork do repositório;
+2. Crie uma branch para sua feature ou correção (`git checkout -b minha-feature`);
+3. Realize as alterações e faça commit das mudanças;
+4. Abra um Pull Request descrevendo suas contribuições.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Licença
+
+Este projeto foi criado para fins acadêmicos no âmbito da disciplina Programação 3 do IC/UFAL. Verifique os arquivos do repositório para informações adicionais sobre licenciamento.
+
+## Autores
+Hugo Stankowich Souza  
+Davi Cavalcanti Muritiba  
+Lucca Paes Costa  
