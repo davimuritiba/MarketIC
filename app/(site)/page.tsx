@@ -96,10 +96,6 @@ export default function HomePage() {
         setCategoriesError(null);
         const response = await fetch("/api/categories", { cache: "no-store" });
 
-        if (!response.ok) {
-          throw new Error("Não foi possível carregar as categorias.");
-        }
-
         const data = (await response.json()) as Categoria[];
         if (!active) {
           return;
