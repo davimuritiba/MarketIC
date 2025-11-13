@@ -276,14 +276,14 @@ export default function HomePage() {
             className="border bg-white rounded-lg p-3 flex flex-col items-center gap-1 hover:bg-neutral-100"
           >
             <Icon className="w-4 h-4" />
-            <span className="text-sm text-center">{label}</span>
+            <span className="text-m text-center">{label}</span>
           </Link>
         ))}
       </div>
 
       <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-xl font-semibold">Categorias</h2>
+          <h2 className="text-2xl font-semibold">Categorias</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {categories.map((category) => {
@@ -304,7 +304,7 @@ export default function HomePage() {
                 }
               >
                 <Icon className="w-5 h-5" />
-                <span className="text-sm text-center">{category.nome}</span>
+                <span className="text-m text-center">{category.nome}</span>
               </button>
             );
           })}
@@ -321,7 +321,7 @@ export default function HomePage() {
 
         <div className="flex flex-wrap items-center gap-4 border-b pb-3">
           <div className="flex items-center gap-2">
-            <span className="font-semibold">Filtrar por:</span>
+            <span className="font-semibold text-lg">Filtrar por:</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -403,7 +403,7 @@ export default function HomePage() {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <span className="font-semibold">Ordenar por</span>
+            <span className="font-semibold text-lg">Ordenar por</span>
             <Select onValueChange={(value) => setSort(value as SortOption)} value={sort}>
               <SelectTrigger className="h-9 w-44 cursor-pointer">
                 <SelectValue placeholder="Ordenação" />
