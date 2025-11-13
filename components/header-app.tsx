@@ -198,14 +198,25 @@ export function HeaderApp({ user }: HeaderAppProps) {
               >
                 Mensagens
               </Link>
-              <button
-                type="button"
-                className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer text-left"
-                onClick={handleOpenLogoutModal}
-                role="menuitem"
-              >
-                Sair da conta
-              </button>
+              {user ? (
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer text-left"
+                  onClick={handleOpenLogoutModal}
+                  role="menuitem"
+                >
+                  Sair da conta
+                </button>
+              ) : (
+                <Link
+                  href="/login"
+                  className="block px-4 py-2 text-sm text-blue-600 hover:bg-blue-100 cursor-pointer text-left"
+                  onClick={handleCloseDropdown}
+                  role="menuitem"
+                >
+                  Fazer login
+                </Link>
+              )}
             </div>
           </details>
         </nav>

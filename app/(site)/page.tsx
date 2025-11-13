@@ -264,7 +264,9 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-semibold">Olá, {userName}</h1>
+      <h1 className="text-3xl font-semibold">
+        {userName ? `Olá, ${userName}` : "Faça seu login"}
+      </h1>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {actions.map(({ label, href, icon: Icon }) => (
