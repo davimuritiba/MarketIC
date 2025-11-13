@@ -63,7 +63,7 @@ export default function AdCard({
           </div>
           <h3 className="text-m font-medium">{item.title}</h3>
           <div className="flex items-center justify-between text-xs">
-            <p className="text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               {item.type === "Venda"
                 ? item.price ?? "Preço não informado"
                 : item.type === "Empréstimo"
@@ -75,11 +75,11 @@ export default function AdCard({
                 : "Proposta de troca"}
             </p>
             {item.type !== "Doação" && item.condition && (
-              <span className="font-bold text-sm">{item.condition}</span>
+              <span className="text-neutral-800 text-base">{item.condition}</span>
             )}
           </div>
           {hasReviews ? (
-            <div className="mt-1 flex items-center gap-1 text-xs">
+            <div className="mt-1 flex items-center gap-1 text-sm">
               <div className="flex text-yellow-500">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star
